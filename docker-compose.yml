@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - DATABASE_URL=postgresql://bakery_user:bakery_password@db:5432/bakery_db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - FLASK_ENV=development
+    depends_on:
+      - db
+    volumes:
+      # Mount source for development (hot reload)
+      - .:/app
+    command: python app.py
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=bakery_db
+      - POSTGRES_USER=bakery_user
+      - POSTGRES_PASSWORD=bakery_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bakery_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@bakery.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
