@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Add Batch - {{ material_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Add Batch: {{ material_name }}</h2>
+    <a href="{{ url_for('materials') }}" class="btn btn-secondary">← Back to Materials</a>
+</div>
+
+<div class="form-container">
+    <form method="POST" class="form">
+        <div class="form-group">
+            <label for="quantity">Quantity ({{ material.unit }}) *</label>
+            <input type="number" id="quantity" name="quantity" step="0.01" min="0.01" required placeholder="e.g., 50">
+        </div>
+
+        <div class="form-group">
+            <label for="cost_per_unit">Cost per {{ material.unit }} *</label>
+            <input type="number" id="cost_per_unit" name="cost_per_unit" step="0.01" min="0" required placeholder="e.g., 2.50">
+        </div>
+
+        <div class="form-group">
+            <label for="purchase_date">Purchase Date *</label>
+            <input type="date" id="purchase_date" name="purchase_date" required value="{{ today }}">
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add Batch</button>
+            <a href="{{ url_for('materials') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Set today's date as default
+    document.getElementById('purchase_date').valueAsDate = new Date();
+</script>
+{% endblock %}

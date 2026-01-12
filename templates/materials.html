@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Materials - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>📦 Raw Materials</h2>
+    <a href="{{ url_for('add_material') }}" class="btn btn-primary">+ Add Material</a>
+</div>
+
+{% if materials %}
+<div class="materials-grid">
+    {% for name, material in materials.items() %}
+    <div class="material-card">
+        <div class="material-header">
+            <h3>{{ name }}</h3>
+            <span class="material-unit">{{ material.unit }}</span>
+        </div>
+
+        <div class="material-stats">
+            <div class="stat">
+                <span class="stat-label">Total Stock:</span>
+                <span class="stat-value {% if material.total_quantity < material.min_quantity %}low-stock{% endif %}">
+                    {{ "%.2f"|format(material.total_quantity) }} {{ material.unit }}
+                </span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Minimum Required:</span>
+                <span class="stat-value">{{ "%.2f"|format(material.min_quantity) }} {{ material.unit }}</span>
+            </div>
+        </div>
+
+        {% if material.batches %}
+        <div class="batches-section">
+            <h4>Batches ({{ material.batches|length }})</h4>
+            <div class="batch-list">
+                {% for batch in material.batches %}
+                <div class="batch-item">
+                    <div class="batch-info">
+                        <span class="batch-qty">{{ "%.2f"|format(batch.quantity) }} {{ material.unit }}</span>
+                        <span class="batch-date">{{ batch.purchase_date }}</span>
+                    </div>
+                    <div class="batch-cost">${{ "%.2f"|format(batch.cost_per_unit) }}/{{ material.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="no-batches">
+            <p>No batches available</p>
+        </div>
+        {% endif %}
+
+        <div class="material-actions">
+            <a href="{{ url_for('add_batch', material_name=name) }}" class="btn btn-sm btn-secondary">Add Batch</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No materials added yet. <a href="{{ url_for('add_material') }}">Add your first material</a></p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Add Material - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Add New Material</h2>
+    <a href="{{ url_for('materials') }}" class="btn btn-secondary">← Back to Materials</a>
+</div>
+
+<div class="form-container">
+    <form method="POST" class="form">
+        <div class="form-group">
+            <label for="name">Material Name *</label>
+            <input type="text" id="name" name="name" required placeholder="e.g., Flour, Sugar, Eggs">
+        </div>
+
+        <div class="form-group">
+            <label for="unit">Unit of Measurement *</label>
+            <select id="unit" name="unit" required>
+                <option value="">Select a unit</option>
+                <option value="kg">Kilograms (kg)</option>
+                <option value="g">Grams (g)</option>
+                <option value="L">Liters (L)</option>
+                <option value="mL">Milliliters (mL)</option>
+                <option value="dozen">Dozen</option>
+                <option value="units">Units</option>
+                <option value="bags">Bags</option>
+                <option value="boxes">Boxes</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="min_quantity">Minimum Quantity (Alert Threshold) *</label>
+            <input type="number" id="min_quantity" name="min_quantity" step="0.01" min="0" required placeholder="e.g., 10">
+            <small class="form-help">You'll receive an alert when stock falls below this level</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Material</button>
+            <a href="{{ url_for('materials') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

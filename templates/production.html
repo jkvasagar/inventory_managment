@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Production - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>🏭 Production</h2>
+    <a href="{{ url_for('add_recipe') }}" class="btn btn-secondary">+ Create Recipe</a>
+</div>
+
+{% if recipes %}
+<div class="production-grid">
+    {% for name, recipe in recipes.items() %}
+    <div class="production-card">
+        <div class="production-header">
+            <h3>{{ name }}</h3>
+            <span class="badge">{{ recipe.batch_size }} units/batch</span>
+        </div>
+
+        <div class="production-ingredients">
+            <h4>Required per batch:</h4>
+            <ul>
+                {% for ingredient in recipe.ingredients %}
+                <li>{{ ingredient.material }}: {{ "%.2f"|format(ingredient.quantity) }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="production-form">
+            <form method="POST" action="{{ url_for('produce', recipe_name=name) }}" class="inline-form">
+                <div class="form-row">
+                    <label for="batches-{{ name }}">Number of batches:</label>
+                    <input type="number" id="batches-{{ name }}" name="batches" min="1" value="1" required>
+                    <button type="submit" class="btn btn-primary">Produce</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No recipes available for production. <a href="{{ url_for('add_recipe') }}">Create a recipe first</a></p>
+</div>
+{% endif %}
+{% endblock %}
