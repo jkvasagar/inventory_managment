@@ -71,6 +71,144 @@ The web app provides:
 - 💳 **Point of Sale** for customer transactions
 - 📈 **Sales Analytics** with revenue tracking
 
+#### Platform-Specific Instructions
+
+##### 🪟 Windows
+
+1. **Open Command Prompt or PowerShell**:
+   - Press `Win + R`, type `cmd`, and press Enter
+   - Or search for "Command Prompt" or "PowerShell" in Start menu
+
+2. **Navigate to project folder**:
+   ```cmd
+   cd C:\path\to\inventory_managment
+   ```
+
+3. **Install dependencies**:
+   ```cmd
+   pip install -r requirements.txt
+   ```
+   If `pip` doesn't work, try:
+   ```cmd
+   python -m pip install -r requirements.txt
+   ```
+
+4. **Run the application**:
+   ```cmd
+   python app.py
+   ```
+   or
+   ```cmd
+   py app.py
+   ```
+
+5. **Open browser** to: `http://localhost:5000`
+
+**Quick Launch (Optional)**: Create `start_bakery.bat`:
+```batch
+@echo off
+cd /d %~dp0
+python app.py
+pause
+```
+Double-click to run!
+
+**Common Issues**:
+- "python is not recognized" → Use `py` instead or add Python to PATH
+- Port 5000 in use → Change port in app.py: `app.run(port=8080)`
+- Firewall warning → Click "Allow access"
+
+##### 🍎 macOS
+
+1. **Open Terminal**:
+   - Press `Cmd + Space`, type "Terminal", press Enter
+   - Or find it in Applications → Utilities → Terminal
+
+2. **Navigate to project folder**:
+   ```bash
+   cd /path/to/inventory_managment
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+   If you get permission errors:
+   ```bash
+   pip3 install --user -r requirements.txt
+   ```
+
+4. **Run the application**:
+   ```bash
+   python3 app.py
+   ```
+
+5. **Open browser** to: `http://localhost:5000`
+
+**Quick Launch (Optional)**: Create `start_bakery.command`:
+```bash
+#!/bin/bash
+cd "$(dirname "$0")"
+python3 app.py
+```
+Make executable: `chmod +x start_bakery.command`
+Double-click to run!
+
+**Common Issues**:
+- Python not found → Install from [python.org](https://www.python.org) or use Homebrew: `brew install python3`
+- Port 5000 in use (macOS Monterey+) → Disable AirPlay Receiver in System Preferences → Sharing
+
+##### 🐧 Linux
+
+1. **Open Terminal**:
+   - Press `Ctrl + Alt + T`
+   - Or search for "Terminal" in applications
+
+2. **Navigate to project folder**:
+   ```bash
+   cd /path/to/inventory_managment
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+   Or use your package manager first:
+   ```bash
+   # Debian/Ubuntu
+   sudo apt install python3-pip
+
+   # Fedora
+   sudo dnf install python3-pip
+
+   # Arch
+   sudo pacman -S python-pip
+   ```
+
+4. **Run the application**:
+   ```bash
+   python3 app.py
+   ```
+
+5. **Open browser** to: `http://localhost:5000`
+
+**Run in background (Optional)**:
+```bash
+nohup python3 app.py > app.log 2>&1 &
+```
+Stop with: `pkill -f app.py`
+
+**Common Issues**:
+- Permission denied → Use `pip3 install --user` or virtual environment
+- Port already in use → Change port in app.py or kill process: `sudo lsof -ti:5000 | xargs kill -9`
+
+#### Stopping the Application
+
+- **All platforms**: Press `Ctrl + C` in the terminal/command prompt
+- **Background mode**: Use process manager to stop Python
+
 ### CLI Version
 
 #### Requirements
