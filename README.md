@@ -1,6 +1,6 @@
 # 🥐 Bakery Inventory Management System
 
-A comprehensive Command-Line Interface (CLI) tool for managing bakery inventory, recipes, production, and sales.
+A comprehensive inventory management system for bakeries, available as both a **Web Application** and a **Command-Line Interface (CLI)** tool. Manage inventory, recipes, production, and sales with an intuitive interface.
 
 ## Features
 
@@ -36,11 +36,48 @@ A comprehensive Command-Line Interface (CLI) tool for managing bakery inventory,
 
 ## Installation
 
-### Requirements
+### Web Application (Recommended)
+
+#### Requirements
+- Python 3.7 or higher
+- Flask (installed via pip)
+
+#### Setup
+1. Clone or download the repository
+2. Navigate to the project directory
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Run the web application:
+
+```bash
+python3 app.py
+```
+
+5. Open your browser and navigate to:
+```
+http://localhost:5000
+```
+
+The web app provides:
+- 📊 **Dashboard** with real-time statistics and alerts
+- 📦 **Material Management** with visual batch tracking
+- 📋 **Recipe Management** with availability indicators
+- 🏭 **Production Interface** for manufacturing products
+- 🍰 **Product Management** with pricing controls
+- 💳 **Point of Sale** for customer transactions
+- 📈 **Sales Analytics** with revenue tracking
+
+### CLI Version
+
+#### Requirements
 - Python 3.6 or higher
 - No external dependencies required (uses only Python standard library)
 
-### Setup
+#### Setup
 1. Clone or download the repository
 2. Navigate to the directory containing `bakery_inventory.py`
 3. Run the script:
@@ -247,9 +284,27 @@ Produce croissants needing 50kg flour:
 
 ```
 inventory_managment/
-├── bakery_inventory.py    # Main application script
+├── app.py                  # Flask web application
+├── bakery_inventory.py     # CLI application (legacy)
+├── requirements.txt        # Python dependencies
+├── templates/              # HTML templates for web app
+│   ├── base.html
+│   ├── index.html
+│   ├── materials.html
+│   ├── add_material.html
+│   ├── add_batch.html
+│   ├── recipes.html
+│   ├── add_recipe.html
+│   ├── production.html
+│   ├── products.html
+│   ├── sales.html
+│   └── sales_history.html
+├── static/                 # Static assets
+│   └── css/
+│       └── style.css       # Application styling
 ├── bakery_data.json        # Data file (auto-created)
-└── README.md              # This file
+├── test_bakery.py          # Test suite
+└── README.md               # This file
 ```
 
 ## Data Backup

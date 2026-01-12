@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Point of Sale - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>💳 Point of Sale</h2>
+    <a href="{{ url_for('sales_history') }}" class="btn btn-secondary">View Sales History</a>
+</div>
+
+{% if products %}
+<div class="sales-grid">
+    {% for name, product in products.items() %}
+    <div class="sale-card {% if product.quantity == 0 or product.price == 0 %}unavailable{% endif %}">
+        <div class="sale-header">
+            <h3>{{ name }}</h3>
+            {% if product.quantity == 0 %}
+            <span class="badge badge-danger">Out of Stock</span>
+            {% elif product.price == 0 %}
+            <span class="badge badge-warning">No Price Set</span>
+            {% else %}
+            <span class="badge badge-success">Available</span>
+            {% endif %}
+        </div>
+
+        <div class="sale-info">
+            <div class="info-row">
+                <span class="info-label">Price:</span>
+                <span class="info-value">
+                    {% if product.price > 0 %}
+                    ${{ "%.2f"|format(product.price) }}
+                    {% else %}
+                    Not set
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">In Stock:</span>
+                <span class="info-value">{{ product.quantity }} units</span>
+            </div>
+        </div>
+
+        {% if product.quantity > 0 and product.price > 0 %}
+        <form method="POST" action="{{ url_for('sell', product_name=name) }}" class="sale-form">
+            <div class="form-group">
+                <label for="quantity-{{ name }}">Quantity:</label>
+                <input type="number" id="quantity-{{ name }}" name="quantity"
+                       min="1" max="{{ product.quantity }}" value="1" required>
+            </div>
+            <div class="sale-total">
+                <span>Total: $</span>
+                <span id="total-{{ name }}">{{ "%.2f"|format(product.price) }}</span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Complete Sale</button>
+        </form>
+
+        <script>
+        (function() {
+            const input = document.getElementById('quantity-{{ name }}');
+            const total = document.getElementById('total-{{ name }}');
+            const price = {{ product.price }};
+
+            input.addEventListener('input', function() {
+                const qty = parseFloat(this.value) || 0;
+                total.textContent = (price * qty).toFixed(2);
+            });
+        })();
+        </script>
+        {% else %}
+        <div class="unavailable-message">
+            {% if product.quantity == 0 %}
+            Cannot sell - out of stock
+            {% elif product.price == 0 %}
+            Cannot sell - price not set
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No products available for sale. <a href="{{ url_for('production') }}">Produce some items first</a></p>
+</div>
+{% endif %}
+{% endblock %}

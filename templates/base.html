@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Bakery Inventory Management{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <h1 class="logo">🥖 Bakery Inventory</h1>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a></li>
+                <li><a href="{{ url_for('materials') }}" {% if request.endpoint in ['materials', 'add_material', 'add_batch'] %}class="active"{% endif %}>Materials</a></li>
+                <li><a href="{{ url_for('recipes') }}" {% if request.endpoint in ['recipes', 'add_recipe'] %}class="active"{% endif %}>Recipes</a></li>
+                <li><a href="{{ url_for('production') }}" {% if request.endpoint == 'production' %}class="active"{% endif %}>Production</a></li>
+                <li><a href="{{ url_for('products') }}" {% if request.endpoint == 'products' %}class="active"{% endif %}>Products</a></li>
+                <li><a href="{{ url_for('sales') }}" {% if request.endpoint in ['sales', 'sales_history'] %}class="active"{% endif %}>Sales</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                        <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 Bakery Inventory Management System</p>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Products - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>🍰 Products</h2>
+    <a href="{{ url_for('production') }}" class="btn btn-secondary">Go to Production</a>
+</div>
+
+{% if products %}
+<div class="products-grid">
+    {% for name, product in products.items() %}
+    <div class="product-card">
+        <div class="product-header">
+            <h3>{{ name }}</h3>
+            <span class="product-stock {% if product.quantity == 0 %}out-of-stock{% endif %}">
+                Stock: {{ product.quantity }}
+            </span>
+        </div>
+
+        <div class="product-pricing">
+            <div class="current-price">
+                {% if product.price > 0 %}
+                <span class="price-label">Price:</span>
+                <span class="price-value">${{ "%.2f"|format(product.price) }}</span>
+                {% else %}
+                <span class="price-label no-price">Price not set</span>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="{{ url_for('set_price', product_name=name) }}" class="price-form">
+                <div class="form-row">
+                    <input type="number" name="price" step="0.01" min="0.01"
+                           value="{{ product.price if product.price > 0 else '' }}"
+                           placeholder="Set price" required>
+                    <button type="submit" class="btn btn-sm btn-secondary">Update</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="product-actions">
+            <a href="{{ url_for('sales') }}" class="btn btn-primary">Sell</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No products available. <a href="{{ url_for('production') }}">Produce some items first</a></p>
+</div>
+{% endif %}
+{% endblock %}

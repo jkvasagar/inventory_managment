@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Sales History - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>📊 Sales History</h2>
+    <a href="{{ url_for('sales') }}" class="btn btn-secondary">← Back to Sales</a>
+</div>
+
+<div class="sales-summary">
+    <div class="summary-card">
+        <h3>Total Revenue</h3>
+        <p class="summary-value">${{ "%.2f"|format(summary.total_revenue) }}</p>
+    </div>
+    <div class="summary-card">
+        <h3>Total Sales</h3>
+        <p class="summary-value">{{ summary.total_sales }}</p>
+    </div>
+</div>
+
+{% if summary.products %}
+<div class="product-summary">
+    <h3>Sales by Product</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity Sold</th>
+                <th>Revenue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product, data in summary.products.items() %}
+            <tr>
+                <td>{{ product }}</td>
+                <td>{{ data.quantity }}</td>
+                <td>${{ "%.2f"|format(data.revenue) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if sales %}
+<div class="sales-history-section">
+    <h3>Recent Transactions (Last 50)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Time</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sale in sales %}
+            <tr>
+                <td>{{ sale.date }}</td>
+                <td>{{ sale.product }}</td>
+                <td>{{ sale.quantity }}</td>
+                <td>${{ "%.2f"|format(sale.price) }}</td>
+                <td>${{ "%.2f"|format(sale.total) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No sales recorded yet.</p>
+</div>
+{% endif %}
+{% endblock %}

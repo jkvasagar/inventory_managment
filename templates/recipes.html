@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Recipes - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>📋 Recipes</h2>
+    <a href="{{ url_for('add_recipe') }}" class="btn btn-primary">+ Create Recipe</a>
+</div>
+
+{% if recipes %}
+<div class="recipes-grid">
+    {% for name, recipe in recipes.items() %}
+    <div class="recipe-card">
+        <div class="recipe-header">
+            <h3>{{ name }}</h3>
+            <span class="recipe-batch-size">Batch: {{ recipe.batch_size }} units</span>
+        </div>
+
+        <div class="recipe-ingredients">
+            <h4>Ingredients:</h4>
+            <ul class="ingredient-list">
+                {% for ingredient in recipe.ingredients %}
+                <li>
+                    <span class="ingredient-name">{{ ingredient.material }}</span>
+                    <span class="ingredient-qty">{{ "%.2f"|format(ingredient.quantity) }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="recipe-availability">
+            {% if recipe.can_make > 0 %}
+            <div class="availability-badge available">
+                ✓ Can make {{ recipe.can_make }} batch{% if recipe.can_make != 1 %}es{% endif %}
+            </div>
+            {% else %}
+            <div class="availability-badge unavailable">
+                ✗ Insufficient materials
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="recipe-actions">
+            <a href="{{ url_for('production') }}" class="btn btn-sm btn-primary">Produce</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No recipes created yet. <a href="{{ url_for('add_recipe') }}">Create your first recipe</a></p>
+</div>
+{% endif %}
+{% endblock %}

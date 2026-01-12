@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h2>Dashboard</h2>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <h3>{{ materials_count }}</h3>
+                <p>Raw Materials</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <h3>{{ recipes_count }}</h3>
+                <p>Recipes</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">🍰</div>
+            <div class="stat-content">
+                <h3>{{ products_count }}</h3>
+                <p>Products</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+                <h3>${{ "%.2f"|format(sales_summary.total_revenue) }}</h3>
+                <p>Total Revenue</p>
+            </div>
+        </div>
+    </div>
+
+    {% if alerts %}
+    <div class="alerts-section">
+        <h3>⚠️ Low Stock Alerts</h3>
+        <div class="alert-list">
+            {% for alert in alerts %}
+            <div class="alert-item alert-warning">
+                <strong>{{ alert.name }}</strong>: Current stock {{ "%.2f"|format(alert.current) }} {{ alert.unit }}
+                (Minimum: {{ "%.2f"|format(alert.minimum) }} {{ alert.unit }})
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <div class="action-grid">
+            <a href="{{ url_for('add_material') }}" class="action-btn">
+                <span class="action-icon">➕</span>
+                <span>Add Material</span>
+            </a>
+            <a href="{{ url_for('add_recipe') }}" class="action-btn">
+                <span class="action-icon">📝</span>
+                <span>Create Recipe</span>
+            </a>
+            <a href="{{ url_for('production') }}" class="action-btn">
+                <span class="action-icon">🏭</span>
+                <span>Produce Items</span>
+            </a>
+            <a href="{{ url_for('sales') }}" class="action-btn">
+                <span class="action-icon">💳</span>
+                <span>Make Sale</span>
+            </a>
+        </div>
+    </div>
+
+    {% if sales_summary.products %}
+    <div class="recent-sales">
+        <h3>Top Selling Products</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity Sold</th>
+                    <th>Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product, data in sales_summary.products.items() %}
+                <tr>
+                    <td>{{ product }}</td>
+                    <td>{{ data.quantity }}</td>
+                    <td>${{ "%.2f"|format(data.revenue) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

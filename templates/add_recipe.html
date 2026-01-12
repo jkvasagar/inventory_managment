@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Create Recipe - Bakery Inventory{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Create New Recipe</h2>
+    <a href="{{ url_for('recipes') }}" class="btn btn-secondary">← Back to Recipes</a>
+</div>
+
+<div class="form-container">
+    <form method="POST" class="form" id="recipeForm">
+        <div class="form-group">
+            <label for="name">Recipe Name *</label>
+            <input type="text" id="name" name="name" required placeholder="e.g., Chocolate Cake, Croissant">
+        </div>
+
+        <div class="form-group">
+            <label for="batch_size">Batch Size (units produced) *</label>
+            <input type="number" id="batch_size" name="batch_size" min="1" required placeholder="e.g., 12">
+            <small class="form-help">How many units does one batch produce?</small>
+        </div>
+
+        <div class="form-section">
+            <h3>Ingredients</h3>
+            <div id="ingredientsList">
+                <!-- Ingredients will be added here dynamically -->
+            </div>
+            <button type="button" class="btn btn-secondary" onclick="addIngredient()">+ Add Ingredient</button>
+        </div>
+
+        <input type="hidden" name="ingredient_count" id="ingredient_count" value="0">
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Recipe</button>
+            <a href="{{ url_for('recipes') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+let ingredientCount = 0;
+const materials = {{ materials.keys() | list | tojson }};
+
+function addIngredient() {
+    const container = document.getElementById('ingredientsList');
+    const index = ingredientCount;
+
+    const ingredientDiv = document.createElement('div');
+    ingredientDiv.className = 'ingredient-row';
+    ingredientDiv.id = 'ingredient-' + index;
+
+    ingredientDiv.innerHTML = `
+        <div class="ingredient-fields">
+            <div class="form-group">
+                <label>Material</label>
+                <select name="ingredient_material_${index}" required>
+                    <option value="">Select material</option>
+                    ${materials.map(m => `<option value="${m}">${m}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Quantity</label>
+                <input type="number" name="ingredient_quantity_${index}" step="0.01" min="0.01" required placeholder="e.g., 2.5">
+            </div>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeIngredient(${index})">Remove</button>
+        </div>
+    `;
+
+    container.appendChild(ingredientDiv);
+    ingredientCount++;
+    document.getElementById('ingredient_count').value = ingredientCount;
+}
+
+function removeIngredient(index) {
+    const element = document.getElementById('ingredient-' + index);
+    if (element) {
+        element.remove();
+    }
+}
+
+// Add first ingredient on page load
+addIngredient();
+</script>
+{% endblock %}
