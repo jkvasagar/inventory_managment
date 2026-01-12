@@ -1,0 +1,22 @@
+# Core dependencies
+Flask==3.0.0
+
+# Production WSGI server
+gunicorn==21.2.0
+
+# Database support
+psycopg2-binary==2.9.9  # PostgreSQL adapter
+SQLAlchemy==2.0.23       # ORM (if migrating from JSON)
+Flask-SQLAlchemy==3.1.1  # Flask-SQLAlchemy integration
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Security enhancements (optional but recommended)
+Flask-Talisman==1.1.0    # HTTPS enforcement and security headers
+Flask-Limiter==3.5.0     # Rate limiting
+Flask-CORS==4.0.0        # CORS support
+
+# Monitoring and logging (optional)
+python-json-logger==2.0.7
+sentry-sdk[flask]==1.38.0  # Error tracking

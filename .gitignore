@@ -4,10 +4,25 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+*.so
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
 
 # Bakery data file (generated at runtime)
 bakery_data.json
 bakery_data_backup_*.json
+*.db
+*.sqlite
+
+# Environment variables (IMPORTANT - contains secrets)
+.env
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -19,3 +34,18 @@ bakery_data_backup_*.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+logs/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
