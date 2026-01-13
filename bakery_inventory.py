@@ -858,6 +858,8 @@ def pos_menu():
         print("\n1. Sell Product")
         print("2. View Available Products")
         print("3. View Sales Summary")
+        print("4. Delete Sale Record")
+        print("5. Clear All Sales History")
         print("0. Back to Main Menu")
         print("="*80)
 
@@ -871,6 +873,10 @@ def pos_menu():
             pause()
         elif choice == "3":
             pos_sales_summary()
+        elif choice == "4":
+            pos_delete_sale()
+        elif choice == "5":
+            pos_clear_sales_history()
         elif choice == "0":
             break
         else:
@@ -1009,6 +1015,112 @@ def pos_sales_summary():
     for product, data in sorted(product_sales.items()):
         print(f"   • {product}: {data['quantity']} units, ${data['revenue']:.2f}")
 
+    pause()
+
+
+def pos_delete_sale():
+    """POS function to delete a specific sale record."""
+    clear_screen()
+    print("="*80)
+    print("🗑️  DELETE SALE RECORD")
+    print("="*80)
+
+    if "sales" not in bakery_data or not bakery_data["sales"]:
+        print("\n✗ No sales records to delete.")
+        pause()
+        return
+
+    # Display all sales with indices
+    print("\nSales Records:")
+    print(f"\n{'#':<5} {'Date':<12} {'Product':<20} {'Qty':<8} {'Price/Unit':<12} {'Total':<10}")
+    print("─"*80)
+
+    for idx, sale in enumerate(bakery_data["sales"], 1):
+        print(f"{idx:<5} {sale['date']:<12} {sale['product']:<20} {sale['quantity']:<8} "
+              f"${sale['price_per_unit']:<11.2f} ${sale['total']:<9.2f}")
+
+    print("─"*80)
+    print(f"\nTotal records: {len(bakery_data['sales'])}")
+
+    # Get sale index to delete
+    sale_index = get_valid_input("\nEnter sale record number to delete (or 0 to cancel): ", int)
+    if sale_index is None or sale_index == 0:
+        print("✗ Deletion cancelled.")
+        pause()
+        return
+
+    if sale_index < 1 or sale_index > len(bakery_data["sales"]):
+        print(f"✗ Invalid record number. Please enter a number between 1 and {len(bakery_data['sales'])}.")
+        pause()
+        return
+
+    # Get the sale to delete (adjust index to 0-based)
+    sale_to_delete = bakery_data["sales"][sale_index - 1]
+
+    # Show confirmation
+    print(f"\n⚠️  You are about to delete the following sale:")
+    print(f"   Date: {sale_to_delete['date']}")
+    print(f"   Product: {sale_to_delete['product']}")
+    print(f"   Quantity: {sale_to_delete['quantity']} units")
+    print(f"   Total: ${sale_to_delete['total']:.2f}")
+
+    confirm = get_valid_input("\nAre you sure you want to delete this sale? (yes/no): ", str)
+    if confirm is None or confirm.lower() != "yes":
+        print("✗ Deletion cancelled.")
+        pause()
+        return
+
+    # Delete the sale
+    deleted_sale = bakery_data["sales"].pop(sale_index - 1)
+
+    print(f"\n✓ Sale record deleted successfully!")
+    print(f"   Deleted: {deleted_sale['product']} - ${deleted_sale['total']:.2f} on {deleted_sale['date']}")
+
+    save_data()
+    pause()
+
+
+def pos_clear_sales_history():
+    """POS function to clear all sales history."""
+    clear_screen()
+    print("="*80)
+    print("🗑️  CLEAR ALL SALES HISTORY")
+    print("="*80)
+
+    if "sales" not in bakery_data or not bakery_data["sales"]:
+        print("\n✗ No sales records to clear.")
+        pause()
+        return
+
+    # Calculate total sales statistics before clearing
+    total_records = len(bakery_data["sales"])
+    total_revenue = sum(sale["total"] for sale in bakery_data["sales"])
+
+    print(f"\n⚠️  WARNING: You are about to delete ALL sales history!")
+    print(f"\n   Total sales records: {total_records}")
+    print(f"   Total revenue: ${total_revenue:.2f}")
+    print(f"\n   This action CANNOT be undone!")
+
+    confirm = get_valid_input("\nAre you sure you want to clear all sales history? (yes/no): ", str)
+    if confirm is None or confirm.lower() != "yes":
+        print("✗ Operation cancelled.")
+        pause()
+        return
+
+    # Second confirmation for safety
+    confirm2 = get_valid_input("Type 'DELETE ALL' to confirm: ", str)
+    if confirm2 is None or confirm2 != "DELETE ALL":
+        print("✗ Operation cancelled. Sales history preserved.")
+        pause()
+        return
+
+    # Clear all sales
+    bakery_data["sales"] = []
+
+    print(f"\n✓ All sales history cleared successfully!")
+    print(f"   Deleted {total_records} sales records totaling ${total_revenue:.2f}")
+
+    save_data()
     pause()
 
 
