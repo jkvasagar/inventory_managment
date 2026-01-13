@@ -268,6 +268,26 @@ def get_sales_summary():
         "products": dict(products)
     }
 
+def delete_sale(index):
+    """Delete a specific sale by index"""
+    if index < 0 or index >= len(bakery_data["sales"]):
+        return False, "Invalid sale index"
+
+    deleted_sale = bakery_data["sales"].pop(index)
+    save_data()
+    return True, f"Sale deleted: {deleted_sale['product']} - ${deleted_sale['total']:.2f}"
+
+def clear_all_sales():
+    """Clear all sales history"""
+    if not bakery_data["sales"]:
+        return False, "No sales history to clear"
+
+    count = len(bakery_data["sales"])
+    total = sum(sale["total"] for sale in bakery_data["sales"])
+    bakery_data["sales"] = []
+    save_data()
+    return True, f"Cleared {count} sales records totaling ${total:.2f}"
+
 # ==================== Routes ====================
 
 @app.route('/')
@@ -423,6 +443,20 @@ def sales_history():
     summary = get_sales_summary()
     recent_sales = sorted(bakery_data["sales"], key=lambda x: x['date'], reverse=True)[:50]
     return render_template('sales_history.html', sales=recent_sales, summary=summary)
+
+@app.route('/sales/delete/<int:index>', methods=['POST'])
+def delete_sale_record(index):
+    """Delete a specific sale record"""
+    success, message = delete_sale(index)
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('sales_history'))
+
+@app.route('/sales/clear', methods=['POST'])
+def clear_sales():
+    """Clear all sales history"""
+    success, message = clear_all_sales()
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('sales_history'))
 
 # API routes for AJAX
 @app.route('/api/alerts')

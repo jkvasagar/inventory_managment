@@ -33,6 +33,8 @@ A comprehensive inventory management system for bakeries, available as both a **
 - View available products and stock levels
 - Track sales history and revenue
 - View sales summaries by product
+- Delete individual sale records
+- Clear all sales history
 
 ## Installation
 
