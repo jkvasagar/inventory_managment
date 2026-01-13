@@ -143,6 +143,28 @@ def consume_material_fifo(material_name, quantity_needed):
 
     return True, "Material consumed"
 
+def delete_material(material_name):
+    """Delete a material from inventory"""
+    if material_name not in bakery_data["materials"]:
+        return False, "Material not found"
+
+    # Check if material is used in any recipes
+    used_in_recipes = []
+    for recipe_name, recipe_data in bakery_data["recipes"].items():
+        for ingredient in recipe_data['ingredients']:
+            if ingredient['material'] == material_name:
+                used_in_recipes.append(recipe_name)
+                break
+
+    if used_in_recipes:
+        recipes_list = ", ".join(used_in_recipes)
+        return False, f"Cannot delete material. Used in recipes: {recipes_list}"
+
+    # Delete the material
+    del bakery_data["materials"][material_name]
+    save_data()
+    return True, f"Material '{material_name}' deleted successfully"
+
 # ==================== Recipe Management ====================
 
 def create_recipe(name, ingredients, batch_size):
@@ -351,6 +373,13 @@ def add_batch(material_name):
 
     material = bakery_data["materials"][material_name]
     return render_template('add_batch.html', material_name=material_name, material=material)
+
+@app.route('/materials/delete/<material_name>', methods=['POST'])
+def delete_material_route(material_name):
+    """Delete a material"""
+    success, message = delete_material(material_name)
+    flash(message, 'success' if success else 'error')
+    return redirect(url_for('materials'))
 
 # Recipe routes
 @app.route('/recipes')
