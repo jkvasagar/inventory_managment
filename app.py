@@ -8,6 +8,7 @@ app = Flask(__name__)
 app.secret_key = 'bakery_secret_key_change_in_production'
 
 # Global data structure
+# TODO: These should be handled in database 
 bakery_data = {
     "materials": {},
     "recipes": {},
