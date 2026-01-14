@@ -1,79 +1,72 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, date
 from collections import defaultdict
+from models import db, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
 
 app = Flask(__name__)
-app.secret_key = 'bakery_secret_key_change_in_production'
 
-# Global data structure
-# TODO: These should be handled in database 
-bakery_data = {
-    "materials": {},
-    "recipes": {},
-    "products": {},
-    "sales": []
+# Configuration
+app.secret_key = os.environ.get('SECRET_KEY', 'bakery_secret_key_change_in_production')
+
+# Database configuration
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Handle PostgreSQL URL (some platforms use postgres:// instead of postgresql://)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Fallback to SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bakery.db'
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
 }
 
-DATA_FILE = "bakery_data.json"
+# Initialize database
+db.init_app(app)
 
-# ==================== Data Persistence ====================
-
-def load_data():
-    """Load bakery data from JSON file"""
-    global bakery_data
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r') as f:
-                bakery_data = json.load(f)
-            return True
-        except (json.JSONDecodeError, IOError):
-            return False
-    return False
-
-def save_data():
-    """Save bakery data to JSON file"""
-    try:
-        with open(DATA_FILE, 'w') as f:
-            json.dump(bakery_data, f, indent=2)
-        return True
-    except IOError:
-        return False
+# Create tables if they don't exist
+with app.app_context():
+    db.create_all()
 
 # ==================== Utility Functions ====================
 
 def get_low_stock_alerts():
     """Get list of materials that are below minimum quantity"""
     alerts = []
-    for material_name, material in bakery_data["materials"].items():
-        total_qty = sum(batch['quantity'] for batch in material['batches'])
-        if total_qty < material['min_quantity']:
+    materials = Material.query.all()
+
+    for material in materials:
+        total_qty = material.get_total_quantity()
+        if total_qty < material.min_quantity:
             alerts.append({
-                'name': material_name,
+                'name': material.name,
                 'current': total_qty,
-                'minimum': material['min_quantity'],
-                'unit': material['unit']
+                'minimum': material.min_quantity,
+                'unit': material.unit
             })
+
     return alerts
 
 def calculate_recipe_availability(recipe_name):
     """Calculate how many batches can be made from available materials"""
-    if recipe_name not in bakery_data["recipes"]:
+    recipe = Recipe.query.filter_by(name=recipe_name).first()
+    if not recipe:
         return 0
 
-    recipe = bakery_data["recipes"][recipe_name]
     max_batches = float('inf')
 
-    for ingredient in recipe['ingredients']:
-        material_name = ingredient['material']
-        required_qty = ingredient['quantity']
+    for ingredient in recipe.ingredients:
+        material = ingredient.material
+        required_qty = ingredient.quantity
+        total_available = material.get_total_quantity()
 
-        if material_name not in bakery_data["materials"]:
+        if total_available < required_qty:
             return 0
-
-        material = bakery_data["materials"][material_name]
-        total_available = sum(batch['quantity'] for batch in material['batches'])
 
         possible_batches = int(total_available / required_qty)
         max_batches = min(max_batches, possible_batches)
@@ -84,206 +77,227 @@ def calculate_recipe_availability(recipe_name):
 
 def create_material(name, unit, min_quantity):
     """Create a new raw material"""
-    if name in bakery_data["materials"]:
+    existing = Material.query.filter_by(name=name).first()
+    if existing:
         return False, "Material already exists"
 
-    bakery_data["materials"][name] = {
-        "unit": unit,
-        "min_quantity": min_quantity,
-        "batches": []
-    }
-    save_data()
+    material = Material(
+        name=name,
+        unit=unit,
+        min_quantity=min_quantity
+    )
+
+    db.session.add(material)
+    db.session.commit()
+
     return True, "Material created successfully"
 
 def add_material_batch(material_name, quantity, cost_per_unit, purchase_date=None):
     """Add a batch of material to inventory"""
-    if material_name not in bakery_data["materials"]:
+    material = Material.query.filter_by(name=material_name).first()
+    if not material:
         return False, "Material does not exist"
 
     if purchase_date is None:
-        purchase_date = datetime.now().strftime("%Y-%m-%d")
+        purchase_date = date.today()
+    elif isinstance(purchase_date, str):
+        purchase_date = datetime.strptime(purchase_date, "%Y-%m-%d").date()
 
-    batch = {
-        "quantity": quantity,
-        "cost_per_unit": cost_per_unit,
-        "purchase_date": purchase_date
-    }
+    batch = MaterialBatch(
+        material_id=material.id,
+        quantity=quantity,
+        cost_per_unit=cost_per_unit,
+        purchase_date=purchase_date
+    )
 
-    bakery_data["materials"][material_name]["batches"].append(batch)
-    save_data()
+    db.session.add(batch)
+    db.session.commit()
+
     return True, "Batch added successfully"
 
 def consume_material_fifo(material_name, quantity_needed):
     """Consume material using FIFO method"""
-    if material_name not in bakery_data["materials"]:
+    material = Material.query.filter_by(name=material_name).first()
+    if not material:
         return False, "Material not found"
 
-    material = bakery_data["materials"][material_name]
-    total_available = sum(batch['quantity'] for batch in material['batches'])
+    total_available = material.get_total_quantity()
 
     if total_available < quantity_needed:
         return False, "Insufficient material"
 
     remaining_needed = quantity_needed
-    batches_to_remove = []
+    batches = MaterialBatch.query.filter_by(material_id=material.id)\
+        .order_by(MaterialBatch.purchase_date).all()
 
-    for i, batch in enumerate(material['batches']):
+    for batch in batches:
         if remaining_needed <= 0:
             break
 
-        if batch['quantity'] <= remaining_needed:
-            remaining_needed -= batch['quantity']
-            batches_to_remove.append(i)
+        if batch.quantity <= remaining_needed:
+            remaining_needed -= batch.quantity
+            db.session.delete(batch)
         else:
-            batch['quantity'] -= remaining_needed
+            batch.quantity -= remaining_needed
             remaining_needed = 0
 
-    for i in reversed(batches_to_remove):
-        material['batches'].pop(i)
-
+    db.session.commit()
     return True, "Material consumed"
 
 def delete_material(material_name):
     """Delete a material from inventory"""
-    if material_name not in bakery_data["materials"]:
+    material = Material.query.filter_by(name=material_name).first()
+    if not material:
         return False, "Material not found"
 
     # Check if material is used in any recipes
-    used_in_recipes = []
-    for recipe_name, recipe_data in bakery_data["recipes"].items():
-        for ingredient in recipe_data['ingredients']:
-            if ingredient['material'] == material_name:
-                used_in_recipes.append(recipe_name)
-                break
+    used_in_recipes = RecipeIngredient.query.filter_by(material_id=material.id).all()
 
     if used_in_recipes:
-        recipes_list = ", ".join(used_in_recipes)
+        recipe_names = [ing.recipe.name for ing in used_in_recipes]
+        recipes_list = ", ".join(set(recipe_names))
         return False, f"Cannot delete material. Used in recipes: {recipes_list}"
 
-    # Delete the material
-    del bakery_data["materials"][material_name]
-    save_data()
+    # Delete the material (batches will be cascade deleted)
+    db.session.delete(material)
+    db.session.commit()
+
     return True, f"Material '{material_name}' deleted successfully"
 
 # ==================== Recipe Management ====================
 
 def create_recipe(name, ingredients, batch_size):
     """Create a new recipe"""
-    if name in bakery_data["recipes"]:
+    existing = Recipe.query.filter_by(name=name).first()
+    if existing:
         return False, "Recipe already exists"
 
-    # Validate all materials exist
-    for ingredient in ingredients:
-        if ingredient['material'] not in bakery_data["materials"]:
-            return False, f"Material '{ingredient['material']}' does not exist"
+    recipe = Recipe(
+        name=name,
+        batch_size=batch_size
+    )
 
-    bakery_data["recipes"][name] = {
-        "ingredients": ingredients,
-        "batch_size": batch_size
-    }
-    save_data()
+    db.session.add(recipe)
+    db.session.flush()  # Get the recipe ID
+
+    # Add ingredients
+    for ingredient_data in ingredients:
+        material = Material.query.filter_by(name=ingredient_data['material']).first()
+        if not material:
+            db.session.rollback()
+            return False, f"Material '{ingredient_data['material']}' does not exist"
+
+        ingredient = RecipeIngredient(
+            recipe_id=recipe.id,
+            material_id=material.id,
+            quantity=ingredient_data['quantity']
+        )
+        db.session.add(ingredient)
+
+    db.session.commit()
     return True, "Recipe created successfully"
 
 # ==================== Production ====================
 
 def produce_product(recipe_name, batches_to_make):
     """Produce products using a recipe"""
-    if recipe_name not in bakery_data["recipes"]:
+    recipe = Recipe.query.filter_by(name=recipe_name).first()
+    if not recipe:
         return False, "Recipe not found"
 
-    recipe = bakery_data["recipes"][recipe_name]
-
     # Check if we have enough materials
-    for ingredient in recipe['ingredients']:
-        material_name = ingredient['material']
-        required_qty = ingredient['quantity'] * batches_to_make
-
-        if material_name not in bakery_data["materials"]:
-            return False, f"Material '{material_name}' not found"
-
-        material = bakery_data["materials"][material_name]
-        total_available = sum(batch['quantity'] for batch in material['batches'])
+    for ingredient in recipe.ingredients:
+        material = ingredient.material
+        required_qty = ingredient.quantity * batches_to_make
+        total_available = material.get_total_quantity()
 
         if total_available < required_qty:
-            return False, f"Insufficient '{material_name}'. Need {required_qty}, have {total_available}"
+            return False, f"Insufficient '{material.name}'. Need {required_qty}, have {total_available}"
 
     # Consume materials using FIFO
-    for ingredient in recipe['ingredients']:
-        material_name = ingredient['material']
-        required_qty = ingredient['quantity'] * batches_to_make
-        success, msg = consume_material_fifo(material_name, required_qty)
+    for ingredient in recipe.ingredients:
+        required_qty = ingredient.quantity * batches_to_make
+        success, msg = consume_material_fifo(ingredient.material.name, required_qty)
         if not success:
+            db.session.rollback()
             return False, msg
 
     # Add to finished products
     product_name = recipe_name
-    total_quantity = recipe['batch_size'] * batches_to_make
+    total_quantity = recipe.batch_size * batches_to_make
 
-    if product_name not in bakery_data["products"]:
-        bakery_data["products"][product_name] = {
-            "quantity": 0,
-            "price": 0
-        }
+    product = Product.query.filter_by(name=product_name).first()
+    if not product:
+        product = Product(
+            name=product_name,
+            quantity=0,
+            price=0
+        )
+        db.session.add(product)
 
-    bakery_data["products"][product_name]["quantity"] += total_quantity
-    save_data()
+    product.quantity += total_quantity
+    db.session.commit()
 
     return True, f"Produced {total_quantity} units of {product_name}"
 
 def set_product_price(product_name, price):
     """Set the selling price for a product"""
-    if product_name not in bakery_data["products"]:
+    product = Product.query.filter_by(name=product_name).first()
+    if not product:
         return False, "Product not found"
 
-    bakery_data["products"][product_name]["price"] = price
-    save_data()
+    product.price = price
+    db.session.commit()
+
     return True, "Price updated successfully"
 
 # ==================== Point of Sale ====================
 
 def sell_product(product_name, quantity):
     """Sell a product"""
-    if product_name not in bakery_data["products"]:
+    product = Product.query.filter_by(name=product_name).first()
+    if not product:
         return False, "Product not found"
 
-    product = bakery_data["products"][product_name]
+    if product.quantity < quantity:
+        return False, f"Insufficient stock. Available: {product.quantity}"
 
-    if product["quantity"] < quantity:
-        return False, f"Insufficient stock. Available: {product['quantity']}"
-
-    if product["price"] <= 0:
+    if product.price <= 0:
         return False, "Product price not set"
 
-    total_amount = product["price"] * quantity
+    total_amount = product.price * quantity
 
-    sale = {
-        "product": product_name,
-        "quantity": quantity,
-        "price": product["price"],
-        "total": total_amount,
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+    sale = Sale(
+        product_id=product.id,
+        product_name=product.name,
+        quantity=quantity,
+        price=product.price,
+        total=total_amount,
+        date=datetime.now()
+    )
 
-    product["quantity"] -= quantity
-    bakery_data["sales"].append(sale)
-    save_data()
+    product.quantity -= quantity
+
+    db.session.add(sale)
+    db.session.commit()
 
     return True, f"Sale completed. Total: ${total_amount:.2f}"
 
 def get_sales_summary():
     """Get sales summary statistics"""
-    if not bakery_data["sales"]:
+    sales = Sale.query.all()
+
+    if not sales:
         return {"total_revenue": 0, "total_sales": 0, "products": {}}
 
-    total_revenue = sum(sale["total"] for sale in bakery_data["sales"])
-    total_sales = len(bakery_data["sales"])
+    total_revenue = sum(sale.total for sale in sales)
+    total_sales = len(sales)
 
     products = defaultdict(lambda: {"quantity": 0, "revenue": 0})
 
-    for sale in bakery_data["sales"]:
-        product_name = sale["product"]
-        products[product_name]["quantity"] += sale["quantity"]
-        products[product_name]["revenue"] += sale["total"]
+    for sale in sales:
+        products[sale.product_name]["quantity"] += sale.quantity
+        products[sale.product_name]["revenue"] += sale.total
 
     return {
         "total_revenue": total_revenue,
@@ -291,24 +305,32 @@ def get_sales_summary():
         "products": dict(products)
     }
 
-def delete_sale(index):
-    """Delete a specific sale by index"""
-    if index < 0 or index >= len(bakery_data["sales"]):
-        return False, "Invalid sale index"
+def delete_sale(sale_id):
+    """Delete a specific sale by ID"""
+    sale = Sale.query.get(sale_id)
+    if not sale:
+        return False, "Sale not found"
 
-    deleted_sale = bakery_data["sales"].pop(index)
-    save_data()
-    return True, f"Sale deleted: {deleted_sale['product']} - ${deleted_sale['total']:.2f}"
+    deleted_info = f"Sale deleted: {sale.product_name} - ${sale.total:.2f}"
+
+    db.session.delete(sale)
+    db.session.commit()
+
+    return True, deleted_info
 
 def clear_all_sales():
     """Clear all sales history"""
-    if not bakery_data["sales"]:
+    sales = Sale.query.all()
+
+    if not sales:
         return False, "No sales history to clear"
 
-    count = len(bakery_data["sales"])
-    total = sum(sale["total"] for sale in bakery_data["sales"])
-    bakery_data["sales"] = []
-    save_data()
+    count = len(sales)
+    total = sum(sale.total for sale in sales)
+
+    Sale.query.delete()
+    db.session.commit()
+
     return True, f"Cleared {count} sales records totaling ${total:.2f}"
 
 # ==================== Routes ====================
@@ -318,24 +340,33 @@ def index():
     """Home page"""
     alerts = get_low_stock_alerts()
     sales_summary = get_sales_summary()
+
+    materials_count = Material.query.count()
+    recipes_count = Recipe.query.count()
+    products_count = Product.query.count()
+
     return render_template('index.html',
                          alerts=alerts,
                          sales_summary=sales_summary,
-                         materials_count=len(bakery_data["materials"]),
-                         recipes_count=len(bakery_data["recipes"]),
-                         products_count=len(bakery_data["products"]))
+                         materials_count=materials_count,
+                         recipes_count=recipes_count,
+                         products_count=products_count)
 
 # Material routes
 @app.route('/materials')
 def materials():
     """View all materials"""
+    materials = Material.query.all()
     materials_with_total = {}
-    for name, material in bakery_data["materials"].items():
-        total_qty = sum(batch['quantity'] for batch in material['batches'])
-        materials_with_total[name] = {
-            **material,
-            'total_quantity': total_qty
+
+    for material in materials:
+        materials_with_total[material.name] = {
+            'unit': material.unit,
+            'min_quantity': material.min_quantity,
+            'batches': [batch.to_dict() for batch in material.batches],
+            'total_quantity': material.get_total_quantity()
         }
+
     return render_template('materials.html', materials=materials_with_total)
 
 @app.route('/materials/add', methods=['GET', 'POST'])
@@ -358,7 +389,8 @@ def add_material():
 @app.route('/materials/add_batch/<material_name>', methods=['GET', 'POST'])
 def add_batch(material_name):
     """Add a batch to existing material"""
-    if material_name not in bakery_data["materials"]:
+    material = Material.query.filter_by(name=material_name).first()
+    if not material:
         flash('Material not found', 'error')
         return redirect(url_for('materials'))
 
@@ -371,8 +403,11 @@ def add_batch(material_name):
         flash(message, 'success' if success else 'error')
         return redirect(url_for('materials'))
 
-    material = bakery_data["materials"][material_name]
-    return render_template('add_batch.html', material_name=material_name, material=material)
+    material_dict = {
+        'unit': material.unit,
+        'min_quantity': material.min_quantity
+    }
+    return render_template('add_batch.html', material_name=material_name, material=material_dict)
 
 @app.route('/materials/delete/<material_name>', methods=['POST'])
 def delete_material_route(material_name):
@@ -385,13 +420,23 @@ def delete_material_route(material_name):
 @app.route('/recipes')
 def recipes():
     """View all recipes"""
+    recipes = Recipe.query.all()
     recipes_with_availability = {}
-    for name, recipe in bakery_data["recipes"].items():
-        availability = calculate_recipe_availability(name)
-        recipes_with_availability[name] = {
-            **recipe,
+
+    for recipe in recipes:
+        availability = calculate_recipe_availability(recipe.name)
+        recipes_with_availability[recipe.name] = {
+            'batch_size': recipe.batch_size,
+            'ingredients': [
+                {
+                    'material': ing.material.name,
+                    'quantity': ing.quantity
+                }
+                for ing in recipe.ingredients
+            ],
             'can_make': availability
         }
+
     return render_template('recipes.html', recipes=recipes_with_availability)
 
 @app.route('/recipes/add', methods=['GET', 'POST'])
@@ -416,20 +461,35 @@ def add_recipe():
 
         if not ingredients:
             flash('At least one ingredient is required', 'error')
-            return render_template('add_recipe.html', materials=bakery_data["materials"])
+            materials = Material.query.all()
+            materials_dict = {m.name: {'unit': m.unit} for m in materials}
+            return render_template('add_recipe.html', materials=materials_dict)
 
         success, message = create_recipe(name, ingredients, batch_size)
         flash(message, 'success' if success else 'error')
         if success:
             return redirect(url_for('recipes'))
 
-    return render_template('add_recipe.html', materials=bakery_data["materials"])
+    materials = Material.query.all()
+    materials_dict = {m.name: {'unit': m.unit} for m in materials}
+    return render_template('add_recipe.html', materials=materials_dict)
 
 # Production routes
 @app.route('/production')
 def production():
     """View production page"""
-    return render_template('production.html', recipes=bakery_data["recipes"])
+    recipes = Recipe.query.all()
+    recipes_dict = {
+        r.name: {
+            'batch_size': r.batch_size,
+            'ingredients': [
+                {'material': ing.material.name, 'quantity': ing.quantity}
+                for ing in r.ingredients
+            ]
+        }
+        for r in recipes
+    }
+    return render_template('production.html', recipes=recipes_dict)
 
 @app.route('/production/produce/<recipe_name>', methods=['POST'])
 def produce(recipe_name):
@@ -443,7 +503,15 @@ def produce(recipe_name):
 @app.route('/products')
 def products():
     """View all products"""
-    return render_template('products.html', products=bakery_data["products"])
+    products = Product.query.all()
+    products_dict = {
+        p.name: {
+            'quantity': p.quantity,
+            'price': p.price
+        }
+        for p in products
+    }
+    return render_template('products.html', products=products_dict)
 
 @app.route('/products/set_price/<product_name>', methods=['POST'])
 def set_price(product_name):
@@ -457,7 +525,15 @@ def set_price(product_name):
 @app.route('/sales')
 def sales():
     """Point of sale page"""
-    return render_template('sales.html', products=bakery_data["products"])
+    products = Product.query.all()
+    products_dict = {
+        p.name: {
+            'quantity': p.quantity,
+            'price': p.price
+        }
+        for p in products
+    }
+    return render_template('sales.html', products=products_dict)
 
 @app.route('/sales/sell/<product_name>', methods=['POST'])
 def sell(product_name):
@@ -471,13 +547,14 @@ def sell(product_name):
 def sales_history():
     """View sales history"""
     summary = get_sales_summary()
-    recent_sales = sorted(bakery_data["sales"], key=lambda x: x['date'], reverse=True)[:50]
+    sales = Sale.query.order_by(Sale.date.desc()).limit(50).all()
+    recent_sales = [sale.to_dict() for sale in sales]
     return render_template('sales_history.html', sales=recent_sales, summary=summary)
 
-@app.route('/sales/delete/<int:index>', methods=['POST'])
-def delete_sale_record(index):
+@app.route('/sales/delete/<int:sale_id>', methods=['POST'])
+def delete_sale_record(sale_id):
     """Delete a specific sale record"""
-    success, message = delete_sale(index)
+    success, message = delete_sale(sale_id)
     flash(message, 'success' if success else 'error')
     return redirect(url_for('sales_history'))
 
@@ -495,8 +572,7 @@ def api_alerts():
     alerts = get_low_stock_alerts()
     return jsonify(alerts)
 
-# Initialize data on startup
-load_data()
-
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV', 'production') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)
