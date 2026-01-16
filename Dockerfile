@@ -30,9 +30,8 @@ COPY --from=builder /root/.local /root/.local
 # Copy application code
 COPY app.py .
 COPY models.py .
-COPY bakery_inventory.py .
-COPY templates/ templates/
-COPY static/ static/
+COPY templates/ ./templates/
+COPY static/ ./static/
 
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
