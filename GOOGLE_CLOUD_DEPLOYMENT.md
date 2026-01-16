@@ -1,15 +1,16 @@
-# Google Cloud Run + Cloud SQL Deployment Guide
+# Google Cloud Run + Cloud SQL Deployment Guide (India Region)
 
-This guide walks you through deploying the Bakery Inventory Management System to Google Cloud Run with Cloud SQL PostgreSQL.
+This guide walks you through deploying the Bakery Inventory Management System to Google Cloud Run with Cloud SQL PostgreSQL in India (Mumbai region).
 
 ## Why This Setup?
 
 ✅ **Perfect for 4-5 daily users**
-✅ **Cost-effective: $7-12/month**
+✅ **Cost-effective: ₹600-1000/month (~$7-12/month)**
 ✅ **Automatic HTTPS**
 ✅ **Auto-scaling (including to zero)**
 ✅ **Managed database with automatic backups**
 ✅ **No data loss with concurrent users**
+✅ **Low latency for India users** (Mumbai data center)
 
 ---
 
@@ -116,16 +117,17 @@ export DB_PASSWORD="$(openssl rand -base64 32)"  # Generate secure password
 echo "Database Password: $DB_PASSWORD"
 echo "SAVE THIS PASSWORD - you'll need it later!"
 
-# Create Cloud SQL instance (db-f1-micro = $7/month)
+# Create Cloud SQL instance (db-f1-micro = ₹600/month, ~$7/month)
+# Using Mumbai (asia-south1) region for low latency in India
 gcloud sql instances create $DB_INSTANCE \
   --database-version=POSTGRES_15 \
   --tier=db-f1-micro \
-  --region=us-central1 \
+  --region=asia-south1 \
   --root-password="$DB_PASSWORD" \
   --storage-type=HDD \
   --storage-size=10GB \
   --backup \
-  --backup-start-time=03:00
+  --backup-start-time=20:00  # 1:30 AM IST (low traffic time)
 
 # This takes 5-10 minutes to complete
 ```
@@ -164,7 +166,7 @@ echo "SAVE THIS SECRET KEY!"
 gcloud run deploy bakery-inventory \
   --source . \
   --platform managed \
-  --region us-central1 \
+  --region asia-south1 \
   --allow-unauthenticated \
   --set-env-vars SECRET_KEY=$SECRET_KEY \
   --set-env-vars FLASK_ENV=production \
@@ -189,7 +191,7 @@ gcloud run deploy bakery-inventory \
 ```bash
 # Get the URL
 export APP_URL=$(gcloud run services describe bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --format="value(status.url)")
 
 echo "Your application is live at: $APP_URL"
@@ -210,11 +212,11 @@ curl $APP_URL
 
 # View recent logs
 gcloud run services logs read bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --limit 50
 
 # Follow logs in real-time
-gcloud run services logs tail bakery-inventory --region us-central1
+gcloud run services logs tail bakery-inventory --region asia-south1
 ```
 
 ### Test Database Connection
@@ -235,31 +237,34 @@ If you have your own domain:
 gcloud run domain-mappings create \
   --service bakery-inventory \
   --domain yourdomain.com \
-  --region us-central1
+  --region asia-south1
 
 # Follow the instructions to update your DNS records
 ```
 
 ---
 
-## Cost Breakdown
+## Cost Breakdown (India Region)
 
 ### Monthly Costs (for 4-5 daily users)
 
-| Service | Tier | Cost |
-|---------|------|------|
-| Cloud Run | 512MB, 1 CPU | $0-5/month* |
-| Cloud SQL | db-f1-micro | ~$7/month |
-| Outbound Traffic | ~1GB | $0.12/month |
-| **TOTAL** | | **~$7-12/month** |
+| Service | Tier | Cost (INR) | Cost (USD) |
+|---------|------|------------|------------|
+| Cloud Run | 512MB, 1 CPU | ₹0-400/month* | $0-5/month* |
+| Cloud SQL | db-f1-micro | ~₹600/month | ~$7/month |
+| Outbound Traffic | ~1GB | ₹10/month | $0.12/month |
+| **TOTAL** | | **₹600-1000/month** | **~$7-12/month** |
 
 *Cloud Run scales to zero when not in use, so you only pay for active time.
+
+**Note:** Prices shown are approximate. 1 USD ≈ ₹83 (rate varies). Check current pricing at https://cloud.google.com/pricing
 
 ### Free Tier Inclusions
 
 - Cloud Run: 2 million requests/month free
 - Cloud Run: 360,000 GB-seconds/month free
 - Cloud SQL: First 30 days free trial
+- ₹25,000 (~$300) free credit for new Google Cloud accounts
 
 ---
 
@@ -269,10 +274,10 @@ gcloud run domain-mappings create \
 
 ```bash
 # Recent logs
-gcloud run services logs read bakery-inventory --region us-central1
+gcloud run services logs read bakery-inventory --region asia-south1
 
 # Live tail
-gcloud run services logs tail bakery-inventory --region us-central1
+gcloud run services logs tail bakery-inventory --region asia-south1
 ```
 
 ### Database Backups
@@ -295,17 +300,17 @@ gcloud sql backups restore BACKUP_ID --backup-instance=$DB_INSTANCE
 ```bash
 # Increase max instances for more traffic
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --max-instances 20
 
 # Increase memory
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --memory 1Gi
 
 # Keep minimum instances running (reduces cold starts)
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --min-instances 1
 ```
 
@@ -317,7 +322,7 @@ When you make changes to your code:
 # Make your code changes, then redeploy
 gcloud run deploy bakery-inventory \
   --source . \
-  --region us-central1
+  --region asia-south1
 
 # That's it! Cloud Run will rebuild and deploy automatically
 ```
@@ -359,12 +364,12 @@ gcloud sql instances describe $DB_INSTANCE --format="value(settings.ipConfigurat
 ```bash
 # Require IAM authentication for Cloud Run
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --no-allow-unauthenticated
 
 # Add specific users
 gcloud run services add-iam-policy-binding bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --member="user:employee@example.com" \
   --role="roles/run.invoker"
 ```
@@ -382,7 +387,7 @@ echo -n "$SECRET_KEY" | gcloud secrets create bakery-secret-key --data-file=-
 
 # Update Cloud Run to use secret
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --update-secrets=SECRET_KEY=bakery-secret-key:latest
 ```
 
@@ -394,7 +399,7 @@ gcloud run services update bakery-inventory \
 
 ```bash
 # Check logs
-gcloud run services logs read bakery-inventory --region us-central1 --limit 100
+gcloud run services logs read bakery-inventory --region asia-south1 --limit 100
 
 # Common issues:
 # 1. Port mismatch - ensure Dockerfile uses $PORT
@@ -407,7 +412,7 @@ gcloud run services logs read bakery-inventory --region us-central1 --limit 100
 ```bash
 # Verify Cloud SQL connection
 gcloud run services describe bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --format="value(spec.template.spec.containers[0].env)"
 
 # Test database connectivity
@@ -418,11 +423,11 @@ gcloud sql connect $DB_INSTANCE --user=$DB_USER
 
 ```bash
 # Check Cloud Run metrics
-gcloud run services describe bakery-inventory --region us-central1
+gcloud run services describe bakery-inventory --region asia-south1
 
 # Increase resources if needed
 gcloud run services update bakery-inventory \
-  --region us-central1 \
+  --region asia-south1 \
   --memory 1Gi \
   --cpu 2
 ```
@@ -435,7 +440,7 @@ gcloud run services update bakery-inventory \
 
 ```bash
 # Delete Cloud Run service
-gcloud run services delete bakery-inventory --region us-central1
+gcloud run services delete bakery-inventory --region asia-south1
 
 # Delete Cloud SQL instance (and all data)
 gcloud sql instances delete $DB_INSTANCE
@@ -471,19 +476,19 @@ gcloud projects delete $PROJECT_ID
 # Quick reference for common commands
 
 # View logs
-gcloud run services logs tail bakery-inventory --region us-central1
+gcloud run services logs tail bakery-inventory --region asia-south1
 
 # Redeploy after changes
-gcloud run deploy bakery-inventory --source . --region us-central1
+gcloud run deploy bakery-inventory --source . --region asia-south1
 
 # Check status
-gcloud run services describe bakery-inventory --region us-central1
+gcloud run services describe bakery-inventory --region asia-south1
 
 # Create backup
 gcloud sql backups create --instance=bakery-db
 
 # Scale up
-gcloud run services update bakery-inventory --region us-central1 --max-instances 20
+gcloud run services update bakery-inventory --region asia-south1 --max-instances 20
 
 # View costs
 gcloud billing accounts list
