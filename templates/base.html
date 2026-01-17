@@ -11,13 +11,24 @@
         <div class="container">
             <h1 class="logo">🥖 Bakery Inventory</h1>
             <ul class="nav-menu">
+                {% if current_user.is_authenticated %}
                 <li><a href="{{ url_for('index') }}" {% if request.endpoint == 'index' %}class="active"{% endif %}>Dashboard</a></li>
                 <li><a href="{{ url_for('materials') }}" {% if request.endpoint in ['materials', 'add_material', 'add_batch'] %}class="active"{% endif %}>Materials</a></li>
                 <li><a href="{{ url_for('recipes') }}" {% if request.endpoint in ['recipes', 'add_recipe'] %}class="active"{% endif %}>Recipes</a></li>
                 <li><a href="{{ url_for('production') }}" {% if request.endpoint == 'production' %}class="active"{% endif %}>Production</a></li>
                 <li><a href="{{ url_for('products') }}" {% if request.endpoint == 'products' %}class="active"{% endif %}>Products</a></li>
                 <li><a href="{{ url_for('sales') }}" {% if request.endpoint in ['sales', 'sales_history'] %}class="active"{% endif %}>Sales</a></li>
+                {% endif %}
             </ul>
+            {% if current_user.is_authenticated %}
+            <div class="user-info">
+                {% if current_user.picture %}
+                <img src="{{ current_user.picture }}" alt="{{ current_user.name }}" class="user-avatar">
+                {% endif %}
+                <span class="user-name">{{ current_user.name }}</span>
+                <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+            </div>
+            {% endif %}
         </div>
     </nav>
 

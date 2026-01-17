@@ -1,13 +1,21 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import os
 from datetime import datetime, date
 from collections import defaultdict
-from models import db, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
+from authlib.integrations.flask_client import OAuth
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from functools import wraps
+from models import db, User, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
 
 app = Flask(__name__)
 
 # Configuration
 app.secret_key = os.environ.get('SECRET_KEY', 'bakery_secret_key_change_in_production')
+
+# Google OAuth Configuration
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
+app.config['GOOGLE_DISCOVERY_URL'] = 'https://accounts.google.com/.well-known/openid-configuration'
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL')
@@ -28,6 +36,30 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 # Initialize database
 db.init_app(app)
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+login_manager.login_message_category = 'info'
+
+# Initialize OAuth
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=app.config['GOOGLE_CLIENT_ID'],
+    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+    server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID for Flask-Login"""
+    return User.query.get(int(user_id))
 
 # Create tables if they don't exist
 with app.app_context():
@@ -333,9 +365,77 @@ def clear_all_sales():
 
     return True, f"Cleared {count} sales records totaling ${total:.2f}"
 
+# ==================== Authentication Routes ====================
+
+@app.route('/login')
+def login():
+    """Display login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('login.html')
+
+@app.route('/login/google')
+def google_login():
+    """Initiate Google OAuth login"""
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/login/callback')
+def google_callback():
+    """Handle Google OAuth callback"""
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+
+        if user_info:
+            # Check if user exists
+            user = User.query.filter_by(google_id=user_info['sub']).first()
+
+            if not user:
+                # Create new user
+                user = User(
+                    google_id=user_info['sub'],
+                    email=user_info['email'],
+                    name=user_info.get('name'),
+                    picture=user_info.get('picture')
+                )
+                db.session.add(user)
+            else:
+                # Update existing user info
+                user.name = user_info.get('name')
+                user.picture = user_info.get('picture')
+                user.last_login = datetime.utcnow()
+
+            db.session.commit()
+            login_user(user)
+            flash(f'Welcome, {user.name}!', 'success')
+
+            # Redirect to originally requested page or home
+            next_page = session.get('next')
+            if next_page:
+                session.pop('next')
+                return redirect(next_page)
+            return redirect(url_for('index'))
+        else:
+            flash('Failed to get user information from Google.', 'error')
+            return redirect(url_for('login'))
+
+    except Exception as e:
+        flash(f'Authentication error: {str(e)}', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Log out the current user"""
+    logout_user()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('login'))
+
 # ==================== Routes ====================
 
 @app.route('/')
+@login_required
 def index():
     """Home page"""
     alerts = get_low_stock_alerts()
@@ -354,6 +454,7 @@ def index():
 
 # Material routes
 @app.route('/materials')
+@login_required
 def materials():
     """View all materials"""
     materials = Material.query.all()
@@ -370,6 +471,7 @@ def materials():
     return render_template('materials.html', materials=materials_with_total)
 
 @app.route('/materials/add', methods=['GET', 'POST'])
+@login_required
 def add_material():
     """Add a new material"""
     if request.method == 'POST':
@@ -387,6 +489,7 @@ def add_material():
     return render_template('add_material.html')
 
 @app.route('/materials/add_batch/<material_name>', methods=['GET', 'POST'])
+@login_required
 def add_batch(material_name):
     """Add a batch to existing material"""
     material = Material.query.filter_by(name=material_name).first()
@@ -410,6 +513,7 @@ def add_batch(material_name):
     return render_template('add_batch.html', material_name=material_name, material=material_dict)
 
 @app.route('/materials/delete/<material_name>', methods=['POST'])
+@login_required
 def delete_material_route(material_name):
     """Delete a material"""
     success, message = delete_material(material_name)
@@ -418,6 +522,7 @@ def delete_material_route(material_name):
 
 # Recipe routes
 @app.route('/recipes')
+@login_required
 def recipes():
     """View all recipes"""
     recipes = Recipe.query.all()
@@ -440,6 +545,7 @@ def recipes():
     return render_template('recipes.html', recipes=recipes_with_availability)
 
 @app.route('/recipes/add', methods=['GET', 'POST'])
+@login_required
 def add_recipe():
     """Add a new recipe"""
     if request.method == 'POST':
@@ -476,6 +582,7 @@ def add_recipe():
 
 # Production routes
 @app.route('/production')
+@login_required
 def production():
     """View production page"""
     recipes = Recipe.query.all()
@@ -492,6 +599,7 @@ def production():
     return render_template('production.html', recipes=recipes_dict)
 
 @app.route('/production/produce/<recipe_name>', methods=['POST'])
+@login_required
 def produce(recipe_name):
     """Produce products from a recipe"""
     batches = int(request.form.get('batches', 1))
@@ -501,6 +609,7 @@ def produce(recipe_name):
 
 # Product routes
 @app.route('/products')
+@login_required
 def products():
     """View all products"""
     products = Product.query.all()
@@ -514,6 +623,7 @@ def products():
     return render_template('products.html', products=products_dict)
 
 @app.route('/products/set_price/<product_name>', methods=['POST'])
+@login_required
 def set_price(product_name):
     """Set product price"""
     price = float(request.form.get('price'))
@@ -523,6 +633,7 @@ def set_price(product_name):
 
 # Sales routes
 @app.route('/sales')
+@login_required
 def sales():
     """Point of sale page"""
     products = Product.query.all()
@@ -536,6 +647,7 @@ def sales():
     return render_template('sales.html', products=products_dict)
 
 @app.route('/sales/sell/<product_name>', methods=['POST'])
+@login_required
 def sell(product_name):
     """Sell a product"""
     quantity = int(request.form.get('quantity', 1))
@@ -544,6 +656,7 @@ def sell(product_name):
     return redirect(url_for('sales'))
 
 @app.route('/sales/history')
+@login_required
 def sales_history():
     """View sales history"""
     summary = get_sales_summary()
@@ -552,6 +665,7 @@ def sales_history():
     return render_template('sales_history.html', sales=recent_sales, summary=summary)
 
 @app.route('/sales/delete/<int:sale_id>', methods=['POST'])
+@login_required
 def delete_sale_record(sale_id):
     """Delete a specific sale record"""
     success, message = delete_sale(sale_id)
@@ -559,6 +673,7 @@ def delete_sale_record(sale_id):
     return redirect(url_for('sales_history'))
 
 @app.route('/sales/clear', methods=['POST'])
+@login_required
 def clear_sales():
     """Clear all sales history"""
     success, message = clear_all_sales()
@@ -567,6 +682,7 @@ def clear_sales():
 
 # API routes for AJAX
 @app.route('/api/alerts')
+@login_required
 def api_alerts():
     """Get low stock alerts as JSON"""
     alerts = get_low_stock_alerts()
