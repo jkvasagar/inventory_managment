@@ -46,15 +46,23 @@ login_manager.login_message_category = 'info'
 
 # Initialize OAuth
 oauth = OAuth(app)
-google = oauth.register(
-    name='google',
-    client_id=app.config['GOOGLE_CLIENT_ID'],
-    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
-    server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+
+# Only register OAuth if credentials are provided
+oauth_enabled = bool(app.config.get('GOOGLE_CLIENT_ID') and app.config.get('GOOGLE_CLIENT_SECRET'))
+
+if oauth_enabled:
+    google = oauth.register(
+        name='google',
+        client_id=app.config['GOOGLE_CLIENT_ID'],
+        client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+        server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
+else:
+    google = None
+    print("WARNING: Google OAuth credentials not configured. OAuth login will be unavailable.")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -382,17 +390,25 @@ def login():
     """Display login page"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    return render_template('login.html')
+    return render_template('login.html', oauth_enabled=oauth_enabled)
 
 @app.route('/login/google')
 def google_login():
     """Initiate Google OAuth login"""
+    if not oauth_enabled or google is None:
+        flash('Google OAuth is not configured. Please contact the administrator.', 'error')
+        return redirect(url_for('login'))
+
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/login/callback')
 def google_callback():
     """Handle Google OAuth callback"""
+    if not oauth_enabled or google is None:
+        flash('Google OAuth is not configured. Please contact the administrator.', 'error')
+        return redirect(url_for('login'))
+
     try:
         token = google.authorize_access_token()
         user_info = token.get('userinfo')

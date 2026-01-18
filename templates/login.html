@@ -29,6 +29,7 @@
                 <h2>Sign in to continue</h2>
                 <p class="login-description">Please sign in with your Google account to access the inventory management system.</p>
 
+                {% if oauth_enabled %}
                 <a href="{{ url_for('google_login') }}" class="btn-google-login">
                     <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -38,6 +39,17 @@
                     </svg>
                     <span>Sign in with Google</span>
                 </a>
+                {% else %}
+                <div class="alert alert-warning" style="margin-top: 20px;">
+                    <strong>OAuth Not Configured</strong>
+                    <p>Google OAuth authentication is not yet configured. Please contact your system administrator to set up the following:</p>
+                    <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                        <li>GOOGLE_CLIENT_ID</li>
+                        <li>GOOGLE_CLIENT_SECRET</li>
+                    </ul>
+                    <p style="margin-top: 10px;">See the <a href="https://github.com/jkvasagar/inventory_managment/blob/main/OAUTH_SETUP.md" target="_blank" style="color: #0066cc; text-decoration: underline;">OAuth Setup Guide</a> for instructions.</p>
+                </div>
+                {% endif %}
             </div>
 
             <div class="login-footer">
