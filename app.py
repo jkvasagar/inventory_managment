@@ -46,6 +46,16 @@ login_manager.login_message_category = 'info'
 
 # Initialize OAuth
 oauth = OAuth(app)
+
+# Check if OAuth credentials are configured
+if not app.config['GOOGLE_CLIENT_ID'] or not app.config['GOOGLE_CLIENT_SECRET']:
+    print("WARNING: Google OAuth credentials are not configured!")
+    print("Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file")
+    print("See OAUTH_SETUP.md for instructions")
+    oauth_configured = False
+else:
+    oauth_configured = True
+
 google = oauth.register(
     name='google',
     client_id=app.config['GOOGLE_CLIENT_ID'],
@@ -81,6 +91,19 @@ def initialize_database():
     """Initialize database before first request"""
     if request.endpoint and request.endpoint != 'health_check':
         ensure_db_initialized()
+# Create tables if they don't exist
+def init_db():
+    """Initialize database tables"""
+    try:
+        with app.app_context():
+            db.create_all()
+            print("Database tables created successfully")
+    except Exception as e:
+        print(f"Warning: Could not create database tables on startup: {e}")
+        print("Tables will be created on first request if needed")
+
+# Initialize database on startup
+init_db()
 
 # ==================== Utility Functions ====================
 
@@ -394,6 +417,12 @@ def login():
 @app.route('/login/google')
 def google_login():
     """Initiate Google OAuth login"""
+    # Check if OAuth is configured
+    if not oauth_configured:
+        flash('Google OAuth is not configured. Please contact the administrator.', 'error')
+        flash('See OAUTH_SETUP.md for instructions on setting up Google OAuth.', 'info')
+        return redirect(url_for('login'))
+
     redirect_uri = url_for('google_callback', _external=True)
     return google.authorize_redirect(redirect_uri)
 
