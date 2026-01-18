@@ -62,8 +62,18 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Create tables if they don't exist
-with app.app_context():
-    db.create_all()
+def init_db():
+    """Initialize database tables"""
+    try:
+        with app.app_context():
+            db.create_all()
+            print("Database tables created successfully")
+    except Exception as e:
+        print(f"Warning: Could not create database tables on startup: {e}")
+        print("Tables will be created on first request if needed")
+
+# Initialize database on startup
+init_db()
 
 # ==================== Utility Functions ====================
 
@@ -433,6 +443,19 @@ def logout():
     return redirect(url_for('login'))
 
 # ==================== Routes ====================
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Cloud Run (no authentication required)"""
+    try:
+        # Test database connection
+        db.session.execute(db.text('SELECT 1'))
+        # Ensure tables exist
+        db.create_all()
+        return jsonify({"status": "healthy", "database": "connected"}), 200
+    except Exception as e:
+        print(f"Health check failed: {e}")
+        return jsonify({"status": "unhealthy", "error": str(e)}), 503
 
 @app.route('/')
 @login_required
