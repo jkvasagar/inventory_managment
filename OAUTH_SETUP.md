@@ -45,8 +45,7 @@ This application uses Google OAuth 2.0 for authentication. Follow these steps to
    - For local development: `http://localhost:5000/login/callback`
    - For Cloud Run: `https://your-service-name-hash.a.run.app/login/callback`
    - For custom domain: `https://yourdomain.com/login/callback`
-
-   **Note**: You'll get the exact Cloud Run URL after deployment. You can add multiple redirect URIs.
+   - For production: `https://yourdomain.com/login/callback`
 6. Click "Create"
 7. Copy the "Client ID" and "Client Secret"
 
