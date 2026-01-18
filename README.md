@@ -454,6 +454,79 @@ The system saves all data to `bakery_data.json`. To backup:
 cp bakery_data.json bakery_data_backup_$(date +%Y%m%d).json
 ```
 
+## Cloud Deployment
+
+### Deploy to Google Cloud Platform (Recommended)
+
+The application is ready for deployment to Google Cloud Platform with Cloud Run and Cloud SQL (PostgreSQL).
+
+#### Quick Deployment
+
+```bash
+# 1. Install Google Cloud SDK
+# Visit: https://cloud.google.com/sdk/docs/install
+
+# 2. Login and set project
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# 3. Run the automated deployment script
+chmod +x deploy-gcp.sh
+./deploy-gcp.sh
+```
+
+The script will:
+- Create Cloud SQL (PostgreSQL) database
+- Set up Secret Manager for credentials
+- Deploy to Cloud Run
+- Provide your application URL
+
+#### Manual Deployment
+
+See [GCP_DEPLOYMENT.md](GCP_DEPLOYMENT.md) for detailed step-by-step instructions including:
+- Cloud SQL setup
+- Secret Manager configuration
+- Google OAuth setup for production
+- CI/CD with Cloud Build
+- Custom domain mapping
+- Cost estimation
+- Troubleshooting
+
+#### Authentication Setup
+
+After deployment, configure Google OAuth:
+1. Go to [Google Cloud Console - APIs & Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create OAuth 2.0 Client ID
+3. Add authorized redirect URI: `https://your-app-url/login/callback`
+4. See [OAUTH_SETUP.md](OAUTH_SETUP.md) for detailed instructions
+
+### Docker Deployment
+
+```bash
+# Build the image
+docker build -t bakery-inventory .
+
+# Run with docker-compose (includes PostgreSQL)
+docker-compose up
+
+# Or run standalone
+docker run -p 8080:8080 \
+  -e SECRET_KEY="your-secret-key" \
+  -e DATABASE_URL="postgresql://..." \
+  -e GOOGLE_CLIENT_ID="your-client-id" \
+  -e GOOGLE_CLIENT_SECRET="your-client-secret" \
+  bakery-inventory
+```
+
+### Environment Variables
+
+Required environment variables:
+- `SECRET_KEY` - Flask session secret (generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
+- `DATABASE_URL` - PostgreSQL connection string
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
+- `FLASK_ENV` - Set to `production` for production deployments
+
 ## License
 
 This is a demonstration project for educational purposes.

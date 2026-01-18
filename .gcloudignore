@@ -1,0 +1,98 @@
+# This file specifies files that are intentionally untracked by gcloud
+# It uses the same syntax as .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.log
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+.tox/
+htmlcov/
+.hypothesis/
+pytest_cache/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+bakery.db
+
+# Documentation (keep only essential docs)
+*.md
+!GCP_DEPLOYMENT.md
+!OAUTH_SETUP.md
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker (not needed for Cloud Run source deploy)
+.dockerignore
+docker-compose.yml
+Dockerfile.dev
+
+# CI/CD (keep cloudbuild.yaml)
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Misc
+*.bak
+*.swp
+*.tmp
+temp/
+tmp/
+logs/
+.cache/
+
+# Keep these files
+!requirements.txt
+!Dockerfile
+!cloudbuild.yaml
+!Procfile
+!app.yaml
