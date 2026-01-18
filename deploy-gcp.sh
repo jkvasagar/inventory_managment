@@ -214,7 +214,8 @@ gcloud run deploy $SERVICE_NAME \
     --cpu 1 \
     --timeout 300 \
     --max-instances 10 \
-    --min-instances 0
+    --min-instances 0 \
+    --no-cpu-throttling
 
 print_success "Deployment complete!"
 

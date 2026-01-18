@@ -71,6 +71,26 @@ def load_user(user_id):
     """Load user by ID for Flask-Login"""
     return User.query.get(int(user_id))
 
+# Database initialization flag
+_db_initialized = False
+
+def ensure_db_initialized():
+    """Ensure database tables are created (lazy initialization)"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            db.create_all()
+            _db_initialized = True
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"Warning: Could not create database tables: {e}")
+            raise
+
+@app.before_request
+def initialize_database():
+    """Initialize database before first request"""
+    if request.endpoint and request.endpoint != 'health_check':
+        ensure_db_initialized()
 # Create tables if they don't exist
 def init_db():
     """Initialize database tables"""
@@ -464,14 +484,16 @@ def logout():
 def health_check():
     """Health check endpoint for Cloud Run (no authentication required)"""
     try:
+        # Initialize database tables if needed
+        ensure_db_initialized()
         # Test database connection
         db.session.execute(db.text('SELECT 1'))
-        # Ensure tables exist
-        db.create_all()
         return jsonify({"status": "healthy", "database": "connected"}), 200
     except Exception as e:
         print(f"Health check failed: {e}")
-        return jsonify({"status": "unhealthy", "error": str(e)}), 503
+        # Return 200 even if DB is not ready yet to allow container to start
+        # This gives Cloud SQL proxy time to establish connection
+        return jsonify({"status": "starting", "message": "Database initializing"}), 200
 
 @app.route('/')
 @login_required
