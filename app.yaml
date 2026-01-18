@@ -1,11 +1,15 @@
-# Google App Engine configuration
-runtime: python311
-entrypoint: gunicorn -b :$PORT --workers 2 --threads 4 app:app
+# Google App Engine configuration for Bakery Inventory Management System
+# Alternative to Cloud Run deployment
+# Deploy with: gcloud app deploy
 
-# Environment variables
+runtime: python311
+entrypoint: gunicorn -b :$PORT --workers 2 --threads 4 --timeout 0 app:app
+
+# Environment variables (use Secret Manager for sensitive values)
 env_variables:
-  SECRET_KEY: "change-this-in-production"
   FLASK_ENV: "production"
+  # Note: Do not put sensitive values here!
+  # Use Secret Manager instead (see beta_settings below)
 
 # Automatic scaling configuration
 automatic_scaling:
@@ -29,3 +33,24 @@ handlers:
 - url: /.*
   script: auto
   secure: always
+
+# Cloud SQL configuration
+# Replace YOUR_PROJECT_ID and REGION with your actual values
+beta_settings:
+  cloud_sql_instances: "YOUR_PROJECT_ID:REGION:bakery-db"
+
+# Health checks
+liveness_check:
+  path: "/"
+  check_interval_sec: 30
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+
+readiness_check:
+  path: "/"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2
+  app_start_timeout_sec: 300

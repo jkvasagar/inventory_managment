@@ -43,7 +43,10 @@ This application uses Google OAuth 2.0 for authentication. Follow these steps to
 4. Enter a name (e.g., "Bakery Inventory Web Client")
 5. Under "Authorized redirect URIs", add:
    - For local development: `http://localhost:5000/login/callback`
-   - For production: `https://yourdomain.com/login/callback`
+   - For Cloud Run: `https://your-service-name-hash.a.run.app/login/callback`
+   - For custom domain: `https://yourdomain.com/login/callback`
+
+   **Note**: You'll get the exact Cloud Run URL after deployment. You can add multiple redirect URIs.
 6. Click "Create"
 7. Copy the "Client ID" and "Client Secret"
 
@@ -128,6 +131,54 @@ The application will be available at `http://localhost:5000`
 - First-time users are automatically created in the database
 - User information (name, email, profile picture) is stored
 - Users can only access the application after authenticating
+
+## Production Deployment (GCP Cloud Run)
+
+When deploying to Google Cloud Platform:
+
+### 1. Use Secret Manager for Credentials
+
+Instead of `.env` files, use Secret Manager:
+
+```bash
+# Store credentials in Secret Manager
+echo -n "YOUR_CLIENT_ID" | gcloud secrets create google-client-id --data-file=-
+echo -n "YOUR_CLIENT_SECRET" | gcloud secrets create google-client-secret --data-file=-
+
+# Grant Cloud Run access
+PROJECT_NUMBER=$(gcloud projects describe PROJECT_ID --format="value(projectNumber)")
+gcloud secrets add-iam-policy-binding google-client-id \
+    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+
+gcloud secrets add-iam-policy-binding google-client-secret \
+    --member="serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+    --role="roles/secretmanager.secretAccessor"
+```
+
+### 2. Update Redirect URIs After Deployment
+
+After deploying to Cloud Run:
+
+```bash
+# Get your Cloud Run URL
+gcloud run services describe bakery-inventory --region REGION --format="value(status.url)"
+```
+
+Then add the redirect URI to Google Cloud Console:
+- URL format: `https://bakery-inventory-xxxxxxxxxx-uc.a.run.app/login/callback`
+
+### 3. Production Security Checklist
+
+- [ ] OAuth consent screen is configured
+- [ ] Redirect URIs use HTTPS only
+- [ ] Credentials are in Secret Manager (not in code)
+- [ ] Test users are added (if using external user type)
+- [ ] Application is using production SECRET_KEY
+- [ ] Database uses strong passwords
+- [ ] Consider moving to "Internal" user type if using Google Workspace
+
+For complete deployment instructions, see [GCP_DEPLOYMENT.md](GCP_DEPLOYMENT.md)
 
 ## Support
 
