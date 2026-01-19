@@ -430,7 +430,7 @@ def google_login():
 @app.route('/login/callback')
 def google_callback():
     """Handle Google OAuth callback"""
-    if not oauth_enabled or google is None:
+    if not oauth_configured or google is None:
         flash('Google OAuth is not configured. Please contact the administrator.', 'error')
         return redirect(url_for('login'))
 
