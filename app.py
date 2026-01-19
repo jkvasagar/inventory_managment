@@ -8,11 +8,16 @@ from functools import wraps
 from models import db, User, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
 from google.cloud import secretmanager
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+
+# Configure Flask to work behind Cloud Run's reverse proxy
+# This ensures OAuth redirect URIs use HTTPS correctly
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # ==================== Secret Management ====================
 
