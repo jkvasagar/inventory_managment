@@ -102,8 +102,9 @@ def init_db():
         print(f"Warning: Could not create database tables on startup: {e}")
         print("Tables will be created on first request if needed")
 
-# Initialize database on startup
-init_db()
+# Don't initialize database on startup - it blocks container startup
+# Database will be initialized on first health check or request
+# init_db()
 
 # ==================== Utility Functions ====================
 
@@ -412,7 +413,7 @@ def login():
     """Display login page"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    return render_template('login.html')
+    return render_template('login.html', oauth_enabled=oauth_enabled)
 
 @app.route('/login/google')
 def google_login():
@@ -429,6 +430,10 @@ def google_login():
 @app.route('/login/callback')
 def google_callback():
     """Handle Google OAuth callback"""
+    if not oauth_enabled or google is None:
+        flash('Google OAuth is not configured. Please contact the administrator.', 'error')
+        return redirect(url_for('login'))
+
     try:
         token = google.authorize_access_token()
         user_info = token.get('userinfo')
@@ -483,6 +488,9 @@ def logout():
 @app.route('/health')
 def health_check():
     """Health check endpoint for Cloud Run (no authentication required)"""
+    # Always return 200 OK so Cloud Run considers the container healthy
+    # Database connection is optional at startup
+    db_status = "not_connected"
     try:
         # Initialize database tables if needed
         ensure_db_initialized()
