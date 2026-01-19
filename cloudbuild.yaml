@@ -7,7 +7,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$SHORT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$BUILD_ID'
       - '-t'
       - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:latest'
       - '-f'
@@ -19,7 +19,7 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$SHORT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$BUILD_ID'
     id: 'push-image-sha'
 
   - name: 'gcr.io/cloud-builders/docker'
@@ -36,7 +36,7 @@ steps:
       - 'deploy'
       - '${_SERVICE_NAME}'
       - '--image'
-      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$SHORT_SHA'
+      - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$BUILD_ID'
       - '--region'
       - '${_REGION}'
       - '--platform'
@@ -62,15 +62,18 @@ steps:
 
 # Images to store in Artifact Registry
 images:
-  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$SHORT_SHA'
+  - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$BUILD_ID'
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:latest'
+
+# Timeout for the entire build (20 minutes)
+timeout: '1200s'
 
 # Substitution variables with defaults
 substitutions:
   _REGION: 'asia-south1'
   _SERVICE_NAME: 'bakery-inventory'
   _ARTIFACT_REGISTRY_REPO: 'bakery-app'
-  _CLOUDSQL_INSTANCE: 'your-project:asia-south1:bakery-db'  # Update this!
+  _CLOUDSQL_INSTANCE: 'inventory-app-484515:asia-south1:bakery-db'
   _MEMORY: '512Mi'
   _CPU: '1'
   _TIMEOUT: '300'
@@ -81,9 +84,7 @@ substitutions:
 options:
   # Use a larger machine for faster builds
   machineType: 'N1_HIGHCPU_8'
-  # Timeout for the entire build (20 minutes)
-  timeout: '1200s'
-  # Use Kaniko cache for faster builds
+  # Use Cloud Logging for build logs
   logging: CLOUD_LOGGING_ONLY
 
 # Optional: Tags for organizing builds
