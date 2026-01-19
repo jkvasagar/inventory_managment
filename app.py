@@ -101,18 +101,18 @@ if not app.config['GOOGLE_CLIENT_ID'] or not app.config['GOOGLE_CLIENT_SECRET']:
     print("Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file")
     print("See OAUTH_SETUP.md for instructions")
     oauth_configured = False
+    google = None  # Don't register OAuth client if credentials are missing
 else:
     oauth_configured = True
-
-google = oauth.register(
-    name='google',
-    client_id=app.config['GOOGLE_CLIENT_ID'],
-    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
-    server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+    google = oauth.register(
+        name='google',
+        client_id=app.config['GOOGLE_CLIENT_ID'],
+        client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+        server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
+        client_kwargs={
+            'scope': 'openid email profile'
+        }
+    )
 
 @login_manager.user_loader
 def load_user(user_id):
