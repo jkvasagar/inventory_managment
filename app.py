@@ -47,28 +47,50 @@ login_manager.login_message_category = 'info'
 # Initialize OAuth
 oauth = OAuth(app)
 
-# Only register OAuth if credentials are provided
-oauth_enabled = bool(app.config.get('GOOGLE_CLIENT_ID') and app.config.get('GOOGLE_CLIENT_SECRET'))
-
-if oauth_enabled:
-    google = oauth.register(
-        name='google',
-        client_id=app.config['GOOGLE_CLIENT_ID'],
-        client_secret=app.config['GOOGLE_CLIENT_SECRET'],
-        server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
-        client_kwargs={
-            'scope': 'openid email profile'
-        }
-    )
+# Check if OAuth credentials are configured
+if not app.config['GOOGLE_CLIENT_ID'] or not app.config['GOOGLE_CLIENT_SECRET']:
+    print("WARNING: Google OAuth credentials are not configured!")
+    print("Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your .env file")
+    print("See OAUTH_SETUP.md for instructions")
+    oauth_configured = False
 else:
-    google = None
-    print("WARNING: Google OAuth credentials not configured. OAuth login will be unavailable.")
+    oauth_configured = True
+
+google = oauth.register(
+    name='google',
+    client_id=app.config['GOOGLE_CLIENT_ID'],
+    client_secret=app.config['GOOGLE_CLIENT_SECRET'],
+    server_metadata_url=app.config['GOOGLE_DISCOVERY_URL'],
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 @login_manager.user_loader
 def load_user(user_id):
     """Load user by ID for Flask-Login"""
     return User.query.get(int(user_id))
 
+# Database initialization flag
+_db_initialized = False
+
+def ensure_db_initialized():
+    """Ensure database tables are created (lazy initialization)"""
+    global _db_initialized
+    if not _db_initialized:
+        try:
+            db.create_all()
+            _db_initialized = True
+            print("Database tables created successfully")
+        except Exception as e:
+            print(f"Warning: Could not create database tables: {e}")
+            raise
+
+@app.before_request
+def initialize_database():
+    """Initialize database before first request"""
+    if request.endpoint and request.endpoint != 'health_check':
+        ensure_db_initialized()
 # Create tables if they don't exist
 def init_db():
     """Initialize database tables"""
@@ -396,8 +418,10 @@ def login():
 @app.route('/login/google')
 def google_login():
     """Initiate Google OAuth login"""
-    if not oauth_enabled or google is None:
+    # Check if OAuth is configured
+    if not oauth_configured:
         flash('Google OAuth is not configured. Please contact the administrator.', 'error')
+        flash('See OAUTH_SETUP.md for instructions on setting up Google OAuth.', 'info')
         return redirect(url_for('login'))
 
     redirect_uri = url_for('google_callback', _external=True)
@@ -468,18 +492,16 @@ def health_check():
     # Database connection is optional at startup
     db_status = "not_connected"
     try:
-        # Try to test database connection (but don't fail if it's not ready)
+        # Initialize database tables if needed
+        ensure_db_initialized()
+        # Test database connection
         db.session.execute(db.text('SELECT 1'))
-        # Ensure tables exist
-        db.create_all()
-        db_status = "connected"
+        return jsonify({"status": "healthy", "database": "connected"}), 200
     except Exception as e:
-        # Log the error but don't fail the health check
-        print(f"Database not ready yet: {e}")
-        db_status = "initializing"
-
-    # Always return 200 OK for Cloud Run health checks
-    return jsonify({"status": "healthy", "database": db_status}), 200
+        print(f"Health check failed: {e}")
+        # Return 200 even if DB is not ready yet to allow container to start
+        # This gives Cloud SQL proxy time to establish connection
+        return jsonify({"status": "starting", "message": "Database initializing"}), 200
 
 @app.route('/')
 @login_required
