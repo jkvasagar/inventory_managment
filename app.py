@@ -132,7 +132,8 @@ def ensure_db_initialized():
             print("Database tables created successfully")
         except Exception as e:
             print(f"Warning: Could not create database tables: {e}")
-            raise
+            # Don't raise - allow the app to continue without DB
+            # This prevents crashes when DB is temporarily unavailable
 
 @app.before_request
 def initialize_database():
