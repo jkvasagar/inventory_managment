@@ -47,7 +47,7 @@ def get_secret(secret_name, project_id=None, fallback_env_var=None):
 
 # Configuration
 # Fetch secrets from Google Cloud Secret Manager (with fallback to env vars)
-app.secret_key = get_secret('SECRET_KEY') or 'bakery_secret_key_change_in_production'
+app.secret_key = get_secret('SECRET_KEY')
 
 # Google OAuth Configuration
 app.config['GOOGLE_CLIENT_ID'] = get_secret('GOOGLE_CLIENT_ID')
