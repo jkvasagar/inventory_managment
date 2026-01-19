@@ -18,7 +18,7 @@ echo ""
 
 # Configuration
 SERVICE_NAME="bakery-inventory"
-REGION="us-central1"
+REGION="asia-south1"
 
 # Get project ID
 PROJECT_ID=$(gcloud config get-value project 2>/dev/null)

@@ -13,7 +13,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 SERVICE_NAME="bakery-inventory"
-REGION="us-central1"
+REGION="asia-south1"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Cloud Run Deployment Debugger${NC}"

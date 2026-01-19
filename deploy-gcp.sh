@@ -64,8 +64,8 @@ print_info "Using Project ID: $PROJECT_ID"
 # Get region or use default
 REGION=$(gcloud config get-value run/region 2>/dev/null)
 if [ -z "$REGION" ]; then
-    REGION="us-central1"
-    read -p "Enter your preferred region (default: us-central1): " INPUT_REGION
+    REGION="asia-south1"
+    read -p "Enter your preferred region (default: asia-south1): " INPUT_REGION
     if [ ! -z "$INPUT_REGION" ]; then
         REGION=$INPUT_REGION
     fi

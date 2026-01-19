@@ -67,10 +67,10 @@ images:
 
 # Substitution variables with defaults
 substitutions:
-  _REGION: 'us-central1'
+  _REGION: 'asia-south1'
   _SERVICE_NAME: 'bakery-inventory'
   _ARTIFACT_REGISTRY_REPO: 'bakery-app'
-  _CLOUDSQL_INSTANCE: 'your-project:us-central1:bakery-db'  # Update this!
+  _CLOUDSQL_INSTANCE: 'your-project:asia-south1:bakery-db'  # Update this!
   _MEMORY: '512Mi'
   _CPU: '1'
   _TIMEOUT: '300'
