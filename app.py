@@ -6,19 +6,56 @@ from authlib.integrations.flask_client import OAuth
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from functools import wraps
 from models import db, User, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
+from google.cloud import secretmanager
 
 app = Flask(__name__)
 
+# ==================== Secret Management ====================
+
+def get_secret(secret_name, project_id=None, fallback_env_var=None):
+    """
+    Fetch a secret from Google Cloud Secret Manager.
+    Falls back to environment variable if Secret Manager is unavailable (for local dev).
+
+    Args:
+        secret_name: Name of the secret in Secret Manager
+        project_id: GCP project ID (defaults to GCP_PROJECT_ID env var)
+        fallback_env_var: Environment variable to use as fallback (defaults to secret_name)
+
+    Returns:
+        Secret value as string, or None if not found
+    """
+    # Try to get from Secret Manager first
+    try:
+        if project_id is None:
+            project_id = os.environ.get('GCP_PROJECT_ID')
+
+        if project_id:
+            client = secretmanager.SecretManagerServiceClient()
+            secret_path = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+            response = client.access_secret_version(request={"name": secret_path})
+            secret_value = response.payload.data.decode('UTF-8')
+            print(f"Successfully fetched secret '{secret_name}' from Secret Manager")
+            return secret_value
+    except Exception as e:
+        print(f"Could not fetch secret '{secret_name}' from Secret Manager: {e}")
+        print(f"Falling back to environment variable")
+
+    # Fallback to environment variable
+    env_var = fallback_env_var if fallback_env_var else secret_name
+    return os.environ.get(env_var)
+
 # Configuration
-app.secret_key = os.environ.get('SECRET_KEY', 'bakery_secret_key_change_in_production')
+# Fetch secrets from Google Cloud Secret Manager (with fallback to env vars)
+app.secret_key = get_secret('SECRET_KEY') or 'bakery_secret_key_change_in_production'
 
 # Google OAuth Configuration
-app.config['GOOGLE_CLIENT_ID'] = os.environ.get('GOOGLE_CLIENT_ID')
-app.config['GOOGLE_CLIENT_SECRET'] = os.environ.get('GOOGLE_CLIENT_SECRET')
+app.config['GOOGLE_CLIENT_ID'] = get_secret('GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = get_secret('GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_DISCOVERY_URL'] = 'https://accounts.google.com/.well-known/openid-configuration'
 
 # Database configuration
-database_url = os.environ.get('DATABASE_URL')
+database_url = get_secret('DATABASE_URL')
 if database_url:
     # Handle PostgreSQL URL (some platforms use postgres:// instead of postgresql://)
     if database_url.startswith('postgres://'):

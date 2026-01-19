@@ -22,3 +22,6 @@ python-json-logger==2.0.7
 sentry-sdk[flask]==1.38.0  # Error tracking
 
 requests==2.31.0
+
+# Google Cloud Secret Manager
+google-cloud-secret-manager==2.18.2
