@@ -84,7 +84,8 @@ jobs:
             --platform managed \
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
-            --set-env-vars SECRET_KEY=${{ secrets.SECRET_KEY }}
+            --set-env-vars GCP_PROJECT_ID=${{ env.PROJECT_ID }},FLASK_ENV=production \
+            --set-secrets SECRET_KEY=flask-secret-key:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest,DATABASE_URL=database-url:latest
 
       - name: Get service URL
         run: |
