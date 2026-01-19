@@ -104,7 +104,7 @@ def init_db():
 
 # Don't initialize database on startup - it blocks container startup
 # Database will be initialized on first health check or request
-# init_db()
+init_db()
 
 # ==================== Utility Functions ====================
 
@@ -413,7 +413,7 @@ def login():
     """Display login page"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    return render_template('login.html', oauth_enabled=oauth_enabled)
+    return render_template('login.html', oauth_enabled=oauth_configured)
 
 @app.route('/login/google')
 def google_login():
