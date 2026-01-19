@@ -152,7 +152,7 @@ def init_db():
 
 # Don't initialize database on startup - it blocks container startup
 # Database will be initialized on first health check or request
-init_db()
+# init_db()
 
 # ==================== Utility Functions ====================
 
