@@ -56,13 +56,24 @@ app.config['GOOGLE_DISCOVERY_URL'] = 'https://accounts.google.com/.well-known/op
 
 # Database configuration
 database_url = get_secret('database-url', fallback_env_var='DATABASE_URL')
-if database_url:
+
+# Check if we're running locally (not in Cloud Run)
+is_local = os.environ.get('K_SERVICE') is None  # K_SERVICE is set in Cloud Run
+
+if database_url and not is_local:
+    # Running in Cloud Run - use the database URL from secrets
     # Handle PostgreSQL URL (some platforms use postgres:// instead of postgresql://)
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+elif database_url and is_local and '/cloudsql/' not in database_url:
+    # Running locally but have a direct PostgreSQL connection string (not Unix socket)
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
     # Fallback to SQLite for local development
+    print("Using SQLite for local development")
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///bakery.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
