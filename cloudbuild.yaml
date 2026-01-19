@@ -65,6 +65,9 @@ images:
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:$SHORT_SHA'
   - '${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REGISTRY_REPO}/bakery-inventory:latest'
 
+# Timeout for the entire build (20 minutes)
+timeout: '1200s'
+
 # Substitution variables with defaults
 substitutions:
   _REGION: 'asia-south1'
@@ -81,9 +84,7 @@ substitutions:
 options:
   # Use a larger machine for faster builds
   machineType: 'N1_HIGHCPU_8'
-  # Timeout for the entire build (20 minutes)
-  timeout: '1200s'
-  # Use Kaniko cache for faster builds
+  # Use Cloud Logging for build logs
   logging: CLOUD_LOGGING_ONLY
 
 # Optional: Tags for organizing builds
