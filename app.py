@@ -7,6 +7,10 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from functools import wraps
 from models import db, User, Material, MaterialBatch, Recipe, RecipeIngredient, Product, Sale
 from google.cloud import secretmanager
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 
