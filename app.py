@@ -47,15 +47,15 @@ def get_secret(secret_name, project_id=None, fallback_env_var=None):
 
 # Configuration
 # Fetch secrets from Google Cloud Secret Manager (with fallback to env vars)
-app.secret_key = get_secret('SECRET_KEY') or 'bakery_secret_key_change_in_production'
+app.secret_key = get_secret('flask-secret-key', fallback_env_var='SECRET_KEY') or 'bakery_secret_key_change_in_production'
 
 # Google OAuth Configuration
-app.config['GOOGLE_CLIENT_ID'] = get_secret('GOOGLE_CLIENT_ID')
-app.config['GOOGLE_CLIENT_SECRET'] = get_secret('GOOGLE_CLIENT_SECRET')
+app.config['GOOGLE_CLIENT_ID'] = get_secret('google-client-id', fallback_env_var='GOOGLE_CLIENT_ID')
+app.config['GOOGLE_CLIENT_SECRET'] = get_secret('google-client-secret', fallback_env_var='GOOGLE_CLIENT_SECRET')
 app.config['GOOGLE_DISCOVERY_URL'] = 'https://accounts.google.com/.well-known/openid-configuration'
 
 # Database configuration
-database_url = get_secret('DATABASE_URL')
+database_url = get_secret('database-url', fallback_env_var='DATABASE_URL')
 if database_url:
     # Handle PostgreSQL URL (some platforms use postgres:// instead of postgresql://)
     if database_url.startswith('postgres://'):
