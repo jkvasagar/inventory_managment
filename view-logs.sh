@@ -25,7 +25,7 @@ gcloud run services logs read $SERVICE_NAME \
     --region $REGION \
     --project $PROJECT_ID \
     --limit=30 \
-    --format="table(timestamp.datetime('%Y-%m-%d %H:%M:%S'),severity,textPayload)"
+    --format="table(timestamp,severity,textPayload)"
 
 echo ""
 echo -e "${BLUE}========================================${NC}"
