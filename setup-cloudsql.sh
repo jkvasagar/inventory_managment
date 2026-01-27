@@ -33,7 +33,7 @@ echo -e "${GREEN}✓${NC} Project: ${PROJECT_ID}"
 
 # Configuration
 REGION="asia-south1"
-INSTANCE_NAME="bakery-db-new"
+INSTANCE_NAME="bakery-db"
 DATABASE_NAME="bakery"
 DB_USER="bakery_user"
 BUCKET_NAME="${PROJECT_ID}-db-backup"
