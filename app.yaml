@@ -37,7 +37,7 @@ handlers:
 # Cloud SQL configuration
 # Replace YOUR_PROJECT_ID and REGION with your actual values
 beta_settings:
-  cloud_sql_instances: "YOUR_PROJECT_ID:REGION:bakery-db"
+  cloud_sql_instances: "YOUR_PROJECT_ID:REGION:bakery-db-new"
 
 # Health checks
 liveness_check:
