@@ -37,7 +37,7 @@ echo ""
 
 # Check if Cloud SQL instance exists
 echo -e "${BLUE}Checking Cloud SQL instance...${NC}"
-DB_INSTANCE_NAME="bakery-db"
+DB_INSTANCE_NAME="bakery-db-new"
 
 if gcloud sql instances describe $DB_INSTANCE_NAME --format="value(name)" 2>/dev/null; then
     INSTANCE_CONNECTION_NAME=$(gcloud sql instances describe $DB_INSTANCE_NAME --format="value(connectionName)")

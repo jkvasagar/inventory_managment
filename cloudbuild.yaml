@@ -73,7 +73,7 @@ substitutions:
   _REGION: 'asia-south1'
   _SERVICE_NAME: 'bakery-inventory'
   _ARTIFACT_REGISTRY_REPO: 'bakery-app'
-  _CLOUDSQL_INSTANCE: 'inventory-app-484515:asia-south1:bakery-db'
+  _CLOUDSQL_INSTANCE: 'inventory-app-484515:asia-south1:bakery-db-new'
   _MEMORY: '512Mi'
   _CPU: '1'
   _TIMEOUT: '300'
